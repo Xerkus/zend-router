@@ -340,7 +340,6 @@ You may use any route type as a child route of a `Part` route.
 >     'regex'    => 'Zend\Router\Http\Regex',
 >     'scheme'   => 'Zend\Router\Http\Scheme',
 >     'segment'  => 'Zend\Router\Http\Segment',
->     'wildcard' => 'Zend\Router\Http\Wildcard',
 >     'method'   => 'Zend\Router\Http\Method',
 > ];
 > foreach ($plugins as $name => $class) {
@@ -356,7 +355,7 @@ You may use any route type as a child route of a `Part` route.
 
 - **Since 3.2.0**
 
-A `Placeholder` route is provided for use by reusable modules. The idea is that a 
+A `Placeholder` route is provided for use by reusable modules. The idea is that a
 module can provide a set of routes anchored by a placeholder route type. The end
 consumer can replace this placeholder route with a different route type of their
 choosing to customise how the module's routes act within the application as a
@@ -408,7 +407,7 @@ auth module sit at the route of their domain. If they wish to change the
 resource location, they can provide an alternative route type to replace the
 `Placeholder` route as part of their own router configuration. As an example:
 
-```php 
+```php
 return [
     'auth' => [
         'type' => \Zend\Mvc\Router\Http\Literal::class,
@@ -508,18 +507,6 @@ $route = Segment::factory([
     ],
 ]);
 ```
-
-### Zend\\Router\\Http\\Wildcard (Deprecated)
-
-> #### Potential security issue
->
-> Misuse of this route type can lead to potential security issues.
-
-> #### Deprecated
->
-> This route type is deprecated. Use the `Segment` route type.
-
-The `Wildcard` route type matches all remaining segments of a URI path.
 
 ## HTTP Routing Examples
 
