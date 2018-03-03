@@ -7,13 +7,20 @@
 
 declare(strict_types=1);
 
-namespace Zend\Router\Http;
+namespace Zend\Router;
 
 use ArrayObject;
 use Traversable;
-use Zend\Router\Exception;
-use Zend\Router\RouteInvokableFactory;
-use Zend\Router\SimpleRouteStack;
+use Zend\Router\Http\Chain;
+use Zend\Router\Http\Hostname;
+use Zend\Router\Http\Literal;
+use Zend\Router\Http\Method;
+use Zend\Router\Http\Part;
+use Zend\Router\Http\Regex;
+use Zend\Router\Http\RouteInterface;
+use Zend\Router\Http\RouteMatch;
+use Zend\Router\Http\Scheme;
+use Zend\Router\Http\Segment;
 use Zend\ServiceManager\Config;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
