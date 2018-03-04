@@ -7,11 +7,12 @@
 
 declare(strict_types=1);
 
-namespace Zend\Router\Http;
+namespace Zend\Router\Route;
 
 use Zend\I18n\Translator\TranslatorAwareInterface;
 use Zend\I18n\Translator\TranslatorInterface as Translator;
 use Zend\Router\Exception;
+use Zend\Router\Http\RouteMatch;
 use Zend\Router\TreeRouteStack;
 use Zend\Stdlib\RequestInterface as Request;
 

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace ZendTest\Router;
 
 use PHPUnit\Framework\TestCase;
-use Zend\Router\Http\HttpRouterFactory;
+use Zend\Router\Route\HttpRouterFactory;
 use Zend\Router\RoutePluginManager;
 use Zend\Router\RouterFactory;
 use Zend\ServiceManager\Config;

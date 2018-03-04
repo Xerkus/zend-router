@@ -8,10 +8,11 @@ declare(strict_types=1);
  * @license   https://framework.zend.com/license/new-bsd New BSD License
  */
 
-namespace Zend\Router\Http;
+namespace Zend\Router\Route;
 
 use Traversable;
 use Zend\Router\Exception;
+use Zend\Router\Http\RouteMatch;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 

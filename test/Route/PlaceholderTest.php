@@ -8,15 +8,15 @@ declare(strict_types=1);
  * @license   https://framework.zend.com/license/new-bsd New BSD License
  */
 
-namespace ZendTest\Router\Http;
+namespace ZendTest\Router\Route;
 
 use PHPUnit\Framework\TestCase;
 use Zend\Http\Request;
-use Zend\Router\Http\Hostname;
-use Zend\Router\Http\Literal;
-use Zend\Router\Http\Placeholder;
-use Zend\Router\Http\RouteMatch;
-use Zend\Router\Http\TreeRouteStack;
+use Zend\Router\Route\Hostname;
+use Zend\Router\Route\Literal;
+use Zend\Router\Route\Placeholder;
+use Zend\Router\Route\RouteMatch;
+use Zend\Router\TreeRouteStack;
 use Zend\Stdlib\ArrayUtils;
 use ZendTest\Router\FactoryTester;
 

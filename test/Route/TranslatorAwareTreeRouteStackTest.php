@@ -7,14 +7,14 @@
 
 declare(strict_types=1);
 
-namespace ZendTest\Router\Http;
+namespace ZendTest\Router\Route;
 
 use PHPUnit\Framework\TestCase;
 use Zend\Http\Request;
 use Zend\I18n\Translator\Translator;
 use Zend\I18n\Translator\TranslatorAwareInterface;
-use Zend\Router\Http\RouteInterface;
-use Zend\Router\Http\TranslatorAwareTreeRouteStack;
+use Zend\Router\Route\RouteInterface;
+use Zend\Router\Route\TranslatorAwareTreeRouteStack;
 use Zend\Uri\Http as HttpUri;
 
 class TranslatorAwareTreeRouteStackTest extends TestCase

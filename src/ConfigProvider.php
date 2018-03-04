@@ -9,15 +9,15 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
-use Zend\Router\Http\Chain;
-use Zend\Router\Http\Hostname;
-use Zend\Router\Http\Literal;
-use Zend\Router\Http\Method;
-use Zend\Router\Http\Part;
-use Zend\Router\Http\Placeholder;
-use Zend\Router\Http\Regex;
-use Zend\Router\Http\Scheme;
-use Zend\Router\Http\Segment;
+use Zend\Router\Route\Chain;
+use Zend\Router\Route\Hostname;
+use Zend\Router\Route\Literal;
+use Zend\Router\Route\Method;
+use Zend\Router\Route\Part;
+use Zend\Router\Route\Placeholder;
+use Zend\Router\Route\Regex;
+use Zend\Router\Route\Scheme;
+use Zend\Router\Route\Segment;
 
 /**
  * Provide base configuration for using the component.
@@ -57,7 +57,7 @@ class ConfigProvider
                 'RoutePluginManager' => RoutePluginManager::class,
             ],
             'factories' => [
-                TreeRouteStack::class => Http\HttpRouterFactory::class,
+                TreeRouteStack::class => Route\HttpRouterFactory::class,
                 RoutePluginManager::class => RoutePluginManagerFactory::class,
                 RouteStackInterface::class => RouterFactory::class,
             ],
