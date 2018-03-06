@@ -9,74 +9,94 @@ declare(strict_types=1);
 
 namespace ZendTest\Router\Route;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Zend\Http\Request;
-use Zend\Router\Route\RouteMatch;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
+use Zend\Diactoros\ServerRequest;
+use Zend\Diactoros\Uri;
+use Zend\Router\Exception\InvalidArgumentException;
+use Zend\Router\Route\Partial\FullMatch;
 use Zend\Router\Route\Scheme;
-use Zend\Stdlib\Request as BaseRequest;
-use Zend\Uri\Http as HttpUri;
-use ZendTest\Router\FactoryTester;
+use Zend\Router\RouteInterface;
 
 /**
  * @covers \Zend\Router\Route\Scheme
  */
 class SchemeTest extends TestCase
 {
+    /** @var ServerRequestInterface */
+    private $request;
+
+    protected function setUp()
+    {
+        $this->request = new ServerRequest([], [], null, null, 'php://memory');
+    }
+
     public function testMatching()
     {
-        $request = new Request();
-        $request->setUri('https://example.com/');
+        $request = $this->request->withUri((new Uri())->withScheme('https'));
 
         $route = new Scheme('https');
-        $match = $route->match($request);
+        $result = $route->match($request);
 
-        $this->assertInstanceOf(RouteMatch::class, $match);
+        $this->assertTrue($result->isSuccess());
+    }
+
+    public function testMatchReturnsResultWithDefaultParameters()
+    {
+        $request = $this->request->withUri((new Uri())->withScheme('https'));
+
+        $route = new Scheme('https', ['foo' => 'bar']);
+        $result = $route->match($request);
+
+        $this->assertEquals(['foo' => 'bar'], $result->getMatchedParams());
     }
 
     public function testNoMatchingOnDifferentScheme()
     {
-        $request = new Request();
-        $request->setUri('http://example.com/');
+        $request = $this->request->withUri((new Uri())->withScheme('http'));
 
         $route = new Scheme('https');
-        $match = $route->match($request);
+        $result = $route->match($request);
 
-        $this->assertNull($match);
+        $this->assertTrue($result->isFailure());
     }
 
     public function testAssembling()
     {
-        $uri = new HttpUri();
+        $uri = new Uri();
         $route = new Scheme('https');
-        $path = $route->assemble([], ['uri' => $uri]);
+        $resultUri = $route->assemble($uri);
 
-        $this->assertEquals('', $path);
-        $this->assertEquals('https', $uri->getScheme());
+        $this->assertEquals('https', $resultUri->getScheme());
     }
 
-    public function testNoMatchWithoutUriMethod()
+    public function testAssemblePassesUriAndParametersToNextAndReturnsResult()
     {
         $route = new Scheme('https');
-        $request = new BaseRequest();
+        /** @var RouteInterface|MockObject $next */
+        $next = $this->getMockBuilder(RouteInterface::class)
+            ->getMock();
+        $next->expects($this->once())
+            ->method('assemble')
+            ->with($this->anything(), ['foo' => 'bar'], ['baz' => 'qux'])
+            ->willReturnCallback(function (UriInterface $uri) {
+                return $uri->withPath('/foo');
+            });
 
-        $this->assertNull($route->match($request));
+        $uri = $route->assemblePartial(new Uri(), $next, ['foo' => 'bar'], ['baz' => 'qux']);
+        $this->assertSame('https', $uri->getScheme());
+        $this->assertSame('/foo', $uri->getPath());
     }
 
-    public function testGetAssembledParams()
+
+    public function testRejectsNegativePathOffset()
     {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Path offset cannot be negative');
+        $request = $this->prophesize(ServerRequestInterface::class);
         $route = new Scheme('https');
-        $route->assemble(['foo' => 'bar']);
-
-        $this->assertEquals([], $route->getAssembledParams());
-    }
-
-    public function testFactory()
-    {
-        $tester = new FactoryTester($this);
-        $tester->testFactory(
-            Scheme::class,
-            ['scheme' => 'Missing "scheme" in options array'],
-            ['scheme' => 'http']
-        );
+        $route->matchPartial($request->reveal(), FullMatch::getInstance(), -1);
     }
 }
