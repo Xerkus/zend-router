@@ -9,15 +9,15 @@ declare(strict_types=1);
 
 namespace Zend\Router\Route;
 
-use Traversable;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UriInterface;
 use Zend\Router\Exception;
-use Zend\Stdlib\ArrayUtils;
-use Zend\Stdlib\RequestInterface as Request;
+use Zend\Router\Exception\InvalidArgumentException;
+use Zend\Router\RouteInterface;
+use Zend\Router\RouteResult;
 
 use function array_merge;
 use function count;
-use function is_array;
-use function method_exists;
 use function preg_match;
 use function preg_quote;
 use function sprintf;
@@ -28,6 +28,8 @@ use function strlen;
  */
 class Hostname implements PartialRouteInterface
 {
+    use PartialRouteTrait;
+
     /**
      * Parts of the route.
      *
@@ -65,12 +67,8 @@ class Hostname implements PartialRouteInterface
 
     /**
      * Create a new hostname route.
-     *
-     * @param  string $route
-     * @param  array  $constraints
-     * @param  array  $defaults
      */
-    public function __construct($route, array $constraints = [], array $defaults = [])
+    public function __construct(string $route, array $constraints = [], array $defaults = [])
     {
         $this->defaults = $defaults;
         $this->parts = $this->parseRouteDefinition($route);
@@ -78,47 +76,11 @@ class Hostname implements PartialRouteInterface
     }
 
     /**
-     * factory(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::factory()
-     * @param  array|Traversable $options
-     * @return Hostname
-     * @throws Exception\InvalidArgumentException
-     */
-    public static function factory($options = [])
-    {
-        if ($options instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($options);
-        } elseif (! is_array($options)) {
-            throw new Exception\InvalidArgumentException(sprintf(
-                '%s expects an array or Traversable set of options',
-                __METHOD__
-            ));
-        }
-
-        if (! isset($options['route'])) {
-            throw new Exception\InvalidArgumentException('Missing "route" in options array');
-        }
-
-        if (! isset($options['constraints'])) {
-            $options['constraints'] = [];
-        }
-
-        if (! isset($options['defaults'])) {
-            $options['defaults'] = [];
-        }
-
-        return new static($options['route'], $options['constraints'], $options['defaults']);
-    }
-
-    /**
      * Parse a route definition.
      *
-     * @param  string $def
-     * @return array
      * @throws Exception\RuntimeException
      */
-    protected function parseRouteDefinition($def)
+    protected function parseRouteDefinition(string $def) : array
     {
         $currentPos = 0;
         $length = strlen($def);
@@ -181,14 +143,8 @@ class Hostname implements PartialRouteInterface
 
     /**
      * Build the matching regex from parsed parts.
-     *
-     * @param  array   $parts
-     * @param  array   $constraints
-     * @param  int $groupIndex
-     * @return string
-     * @throws Exception\RuntimeException
      */
-    protected function buildRegex(array $parts, array $constraints, &$groupIndex = 1)
+    protected function buildRegex(array $parts, array $constraints, int &$groupIndex = 1) : string
     {
         $regex = '';
 
@@ -224,14 +180,9 @@ class Hostname implements PartialRouteInterface
     /**
      * Build host.
      *
-     * @param  array   $parts
-     * @param  array   $mergedParams
-     * @param  bool    $isOptional
-     * @return string
-     * @throws Exception\RuntimeException
-     * @throws Exception\InvalidArgumentException
+     * @throws InvalidArgumentException
      */
-    protected function buildHost(array $parts, array $mergedParams, $isOptional)
+    protected function buildHost(array $parts, array $mergedParams, bool $isOptional) : string
     {
         $host = '';
         $skip = true;
@@ -248,7 +199,7 @@ class Hostname implements PartialRouteInterface
 
                     if (! isset($mergedParams[$part[1]])) {
                         if (! $isOptional) {
-                            throw new Exception\InvalidArgumentException(sprintf('Missing parameter "%s"', $part[1]));
+                            throw new InvalidArgumentException(sprintf('Missing parameter "%s"', $part[1]));
                         }
 
                         return '';
@@ -284,25 +235,24 @@ class Hostname implements PartialRouteInterface
     }
 
     /**
-     * match(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::match()
-     * @param  Request $request
-     * @return RouteMatch|null
+     * @throws InvalidArgumentException
      */
-    public function match(Request $request)
-    {
-        if (! method_exists($request, 'getUri')) {
-            return;
+    public function matchPartial(
+        Request $request,
+        RouteInterface $next,
+        int $pathOffset = 0,
+        array $options = []
+    ) : RouteResult {
+        if ($pathOffset < 0) {
+            throw new InvalidArgumentException('Path offset cannot be negative');
         }
-
         $uri = $request->getUri();
         $host = $uri->getHost();
 
         $result = preg_match('(^' . $this->regex . '$)', $host, $matches);
 
         if (! $result) {
-            return;
+            return RouteResult::fromRouteFailure();
         }
 
         $params = [];
@@ -313,43 +263,29 @@ class Hostname implements PartialRouteInterface
             }
         }
 
-        return new RouteMatch(array_merge($this->defaults, $params));
-    }
+        $result = $next->match($request, $pathOffset, $options);
 
-    /**
-     * assemble(): Defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::assemble()
-     * @param  array $params
-     * @param  array $options
-     * @return mixed
-     */
-    public function assemble(array $params = [], array $options = [])
-    {
-        $this->assembledParams = [];
-
-        if (isset($options['uri'])) {
-            $host = $this->buildHost(
-                $this->parts,
-                array_merge($this->defaults, $params),
-                false
-            );
-
-            $options['uri']->setHost($host);
+        if ($result->isFailure()) {
+            return $result;
         }
 
-        // A hostname does not contribute to the path, thus nothing is returned.
-        return '';
+        return $result->withMatchedParams(array_merge($this->defaults, $params, $result->getMatchedParams()));
     }
 
-    /**
-     * getAssembledParams(): defined by RouteInterface interface.
-     *
-     * @see    PartialRouteInterface::getAssembledParams
-     * @return array
-     */
-    public function getAssembledParams()
-    {
-        return $this->assembledParams;
+    public function assemblePartial(
+        UriInterface $uri,
+        RouteInterface $next,
+        array $params = [],
+        array $options = []
+    ) : UriInterface {
+        $this->assembledParams = [];
+
+        $uri = $uri->withHost($this->buildHost(
+            $this->parts,
+            array_merge($this->defaults, $params),
+            false
+        ));
+
+        return $next->assemble($uri, $params, $options);
     }
 }
