@@ -1,7 +1,7 @@
 <?php
 /**
  * @link      http://github.com/zendframework/zend-router for the canonical source repository
- * @copyright Copyright (c) 2005-2016 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright Copyright (c) 2005-2018 Zend Technologies USA Inc. (http://www.zend.com)
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  */
 
@@ -9,400 +9,319 @@ declare(strict_types=1);
 
 namespace ZendTest\Router\Route;
 
-use ArrayObject;
 use PHPUnit\Framework\TestCase;
-use Zend\Http\Request;
+use Psr\Http\Message\ServerRequestInterface;
+use Zend\Diactoros\ServerRequest;
+use Zend\Diactoros\Uri;
 use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
 use Zend\Router\Route\Literal;
+use Zend\Router\Route\Method;
 use Zend\Router\Route\Part;
-use Zend\Router\Route\RouteMatch;
+use Zend\Router\Route\PartialRouteInterface;
 use Zend\Router\Route\Segment;
-use Zend\Router\Route\Wildcard;
-use Zend\Router\RouteInvokableFactory;
-use Zend\Router\RoutePluginManager;
-use Zend\ServiceManager\ServiceManager;
-use Zend\Stdlib\Parameters;
-use Zend\Stdlib\Request as BaseRequest;
-use ZendTest\Router\FactoryTester;
-
-use function strlen;
-use function strpos;
+use Zend\Router\RouteResult;
+use Zend\Router\TreeRouteStack;
+use ZendTest\Router\Route\TestAsset\RouteTestDefinition;
+use ZendTest\Router\Route\TestAsset\RouteTestTrait;
 
 /**
  * @covers \Zend\Router\Route\Part
  */
 class PartTest extends TestCase
 {
-    public static function getRoutePlugins()
-    {
-        return new RoutePluginManager(new ServiceManager(), [
-            'aliases' => [
-                'literal'  => Literal::class,
-                'Literal'  => Literal::class,
-                'part'     => Part::class,
-                'Part'     => Part::class,
-                'segment'  => Segment::class,
-                'Segment'  => Segment::class,
-                'wildcard' => Wildcard::class,
-                'Wildcard' => Wildcard::class,
-                'wildCard' => Wildcard::class,
-                'WildCard' => Wildcard::class,
-            ],
-            'factories' => [
-                Literal::class  => RouteInvokableFactory::class,
-                Part::class     => RouteInvokableFactory::class,
-                Segment::class  => RouteInvokableFactory::class,
-                Wildcard::class => RouteInvokableFactory::class,
+    use RouteTestTrait;
 
-                // v2 normalized names
-
-                'zendmvcrouterhttpliteral'  => RouteInvokableFactory::class,
-                'zendmvcrouterhttppart'     => RouteInvokableFactory::class,
-                'zendmvcrouterhttpsegment'  => RouteInvokableFactory::class,
-                'zendmvcrouterhttpwildcard' => RouteInvokableFactory::class,
-            ],
-        ]);
-    }
-
-    public static function getRoute()
+    public function getTestRoute() : Part
     {
         return new Part(
+            new Literal('/foo', ['controller' => 'foo']),
+            [],
             [
-                'type'    => Literal::class,
-                'options' => [
-                    'route'    => '/foo',
-                    'defaults' => ['controller' => 'foo'],
-                ],
+                'bar' => new Literal('/bar', ['controller' => 'bar']),
+                'baz' => new Part(
+                    new Literal('/baz'),
+                    [],
+                    [
+                        'bat' => new Segment('/:controller'),
+                    ]
+                ),
+                'bat' => new Part(
+                    new Segment('/bat[/:foo]', [], ['foo' => 'bar']),
+                    [],
+                    [
+                        'literal' => new Literal('/bar'),
+                        'optional' => new Segment('/bat[/:bar]'),
+                    ],
+                    true
+                ),
             ],
-            true,
-            self::getRoutePlugins(),
-            [
-                'bar' => [
-                    'type'    => Literal::class,
-                    'options' => [
-                        'route'    => '/bar',
-                        'defaults' => ['controller' => 'bar'],
-                    ],
-                ],
-                'baz' => [
-                    'type'    => Literal::class,
-                    'options' => ['route' => '/baz'],
-                    'child_routes' => [
-                        'bat' => [
-                            'type'    => Segment::class,
-                            'options' => ['route' => '/:controller'],
-                            'may_terminate' => true,
-                            'child_routes'  => [
-                                'wildcard' => [
-                                    'type' => Wildcard::class,
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-                'bat' => [
-                    'type'    => Segment::class,
-                    'options' => [
-                        'route'    => '/bat[/:foo]',
-                        'defaults' => ['foo' => 'bar'],
-                    ],
-                    'may_terminate' => true,
-                    'child_routes'  => [
-                        'literal' => [
-                            'type'   => Literal::class,
-                            'options' => ['route' => '/bar'],
-                        ],
-                        'optional' => [
-                            'type'   => Segment::class,
-                            'options' => ['route' => '/bat[/:bar]'],
-                        ],
-                    ],
-                ],
-            ]
+            true
         );
     }
 
-    public static function getRouteAlternative()
+    public function getRouteAlternative() : Part
     {
         return new Part(
-            [
-                'type' => Segment::class,
-                'options' => [
-                    'route' => '/[:controller[/:action]]',
-                    'defaults' => [
-                        'controller' => 'fo-fo',
-                        'action' => 'index',
-                    ],
-                ],
-            ],
-            true,
-            self::getRoutePlugins(),
-            [
-                'wildcard' => [
-                    'type' => Wildcard::class,
-                    'options' => [
-                        'key_value_delimiter' => '/',
-                        'param_delimiter' => '/',
-                    ],
-                ],
-            ]
+            new Segment('/[:controller[/:action]]', [], [
+                'controller' => 'fo-fo',
+                'action' => 'index',
+            ]),
+            [],
+            [],
+            true
         );
     }
 
-    public static function routeProvider()
+    public function getRouteTestDefinitions() : iterable
     {
-        return [
-            'simple-match' => [
-                self::getRoute(),
-                '/foo',
-                null,
-                null,
-                ['controller' => 'foo'],
-            ],
-            'offset-skips-beginning' => [
-                self::getRoute(),
-                '/bar/foo',
-                4,
-                null,
-                ['controller' => 'foo'],
-            ],
-            'simple-child-match' => [
-                self::getRoute(),
-                '/foo/bar',
-                null,
-                'bar',
-                ['controller' => 'bar'],
-            ],
-            'offset-does-not-enable-partial-matching' => [
-                self::getRoute(),
-                '/foo/foo',
-                null,
-                null,
-                null,
-            ],
-            'offset-does-not-enable-partial-matching-in-child' => [
-                self::getRoute(),
-                '/foo/bar/baz',
-                null,
-                null,
-                null,
-            ],
-            'non-terminating-part-does-not-match' => [
-                self::getRoute(),
-                '/foo/baz',
-                null,
-                null,
-                null,
-            ],
-            'child-of-non-terminating-part-does-match' => [
-                self::getRoute(),
-                '/foo/baz/bat',
-                null,
-                'baz/bat',
-                ['controller' => 'bat'],
-            ],
-            'parameters-are-used-only-once' => [
-                self::getRoute(),
-                '/foo/baz/wildcard/foo/bar',
-                null,
-                'baz/bat/wildcard',
-                ['controller' => 'wildcard', 'foo' => 'bar'],
-            ],
-            'optional-parameters-are-dropped-without-child' => [
-                self::getRoute(),
-                '/foo/bat',
-                null,
-                'bat',
-                ['foo' => 'bar'],
-            ],
-            'optional-parameters-are-not-dropped-with-child' => [
-                self::getRoute(),
-                '/foo/bat/bar/bar',
-                null,
-                'bat/literal',
-                ['foo' => 'bar'],
-            ],
-            'optional-parameters-not-required-in-last-part' => [
-                self::getRoute(),
-                '/foo/bat/bar/bat',
-                null,
-                'bat/optional',
-                ['foo' => 'bar'],
-            ],
-            'simple-match' => [
-                self::getRouteAlternative(),
-                '/',
-                null,
-                null,
-                [
-                    'controller' => 'fo-fo',
-                    'action' => 'index',
-                ],
-            ],
-            'match-wildcard' => [
-                self::getRouteAlternative(),
-                '/fo-fo/index/param1/value1',
-                null,
-                'wildcard',
-                [
-                    'controller' => 'fo-fo',
-                    'action' => 'index',
-                    'param1' => 'value1',
-                ],
-            ],
-            /*
-            'match-query' => array(
-                self::getRouteAlternative(),
-                '/fo-fo/index?param1=value1',
-                0,
-                'query',
-                array(
-                    'controller' => 'fo-fo',
-                    'action' => 'index'
-                )
+        $params = ['controller' => 'foo'];
+        yield 'simple match' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params)
             )
-            */
-        ];
-    }
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params);
 
-    /**
-     * @dataProvider routeProvider
-     * @param        Part    $route
-     * @param        string  $path
-     * @param        int     $offset
-     * @param        string  $routeName
-     * @param        array   $params
-     */
-    public function testMatching(Part $route, $path, $offset, $routeName, ?array $params = null)
-    {
-        $request = new Request();
-        $request->setUri('http://example.com' . $path);
-        $match = $route->match($request, $offset);
+        $params = ['controller' => 'foo'];
+        yield 'offset-skips-beginning' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/bar/foo')
+        ))
+            ->usePathOffset(4)
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params)
+            )
+            ->shouldAssembleAndExpectResult(new Uri('/foo'))
+            ->useParamsForAssemble($params);
 
-        if ($params === null) {
-            $this->assertNull($match);
-        } else {
-            $this->assertInstanceOf(RouteMatch::class, $match);
+        $params = ['controller' => 'bar'];
+        yield 'simple child match' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo/bar')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params, 'bar')
+            )
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params)
+            ->useOptionsForAssemble(['name' => 'bar']);
 
-            if ($offset === null) {
-                $this->assertEquals(strlen($path), $match->getLength());
-            }
+        yield 'non terminating part does not match' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo/baz')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteFailure()
+            );
 
-            $this->assertEquals($routeName, $match->getMatchedRouteName());
+        $params = ['controller' => 'bat'];
+        yield 'child of non terminating part does match' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo/baz/bat')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params, 'baz/bat')
+            )
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params)
+            ->useOptionsForAssemble(['name' => 'baz/bat']);
 
-            foreach ($params as $key => $value) {
-                $this->assertEquals($value, $match->getParam($key));
-            }
-        }
-    }
+        $params = ['controller' => 'foo', 'foo' => 'bar'];
+        yield 'optional parameters are dropped without child' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo/bat')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params, 'bat')
+            )
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params)
+            ->useOptionsForAssemble(['name' => 'bat']);
 
-    /**
-     * @dataProvider routeProvider
-     * @param        Part    $route
-     * @param        string  $path
-     * @param        int     $offset
-     * @param        string  $routeName
-     * @param        array   $params
-     */
-    public function testAssembling(Part $route, $path, $offset, $routeName, ?array $params = null)
-    {
-        if ($params === null) {
-            // Data which will not match are not tested for assembling.
-            return;
-        }
+        $params = ['controller' => 'foo', 'foo' => 'bar'];
+        yield 'optional parameters are not dropped with child' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo/bat/bar/bar')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params, 'bat/literal')
+            )
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params)
+            ->useOptionsForAssemble(['name' => 'bat/literal']);
 
-        $result = $route->assemble($params, ['name' => $routeName]);
+        $params = ['controller' => 'foo', 'foo' => 'bar'];
+        yield 'optional parameters not required in last part' => (new RouteTestDefinition(
+            $this->getTestRoute(),
+            new Uri('/foo/bat/bar/bat')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params, 'bat/optional')
+            )
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params)
+            ->useOptionsForAssemble(['name' => 'bat/optional']);
 
-        if ($offset !== null) {
-            $this->assertEquals($offset, strpos($path, $result, $offset));
-        } else {
-            $this->assertEquals($path, $result);
-        }
+        $params = ['controller' => 'fo-fo', 'action' => 'index'];
+        yield 'simple match 2' => (new RouteTestDefinition(
+            $this->getRouteAlternative(),
+            new Uri('/')
+        ))
+            ->expectMatchResult(
+                RouteResult::fromRouteMatch($params)
+            )
+            ->shouldAssembleAndExpectResultSameAsUriForMatching()
+            ->useParamsForAssemble($params);
     }
 
     public function testAssembleNonTerminatedRoute()
     {
+        $uri = new Uri();
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Part route may not terminate');
-        self::getRoute()->assemble([], ['name' => 'baz']);
+        $this->getTestRoute()->assemble($uri, [], ['name' => 'baz']);
     }
 
-    public function testBaseRouteMayNotBePartRoute()
+    public function testMethodFailureReturnsMethodFailureOnTerminatedMatch()
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Base route may not be a part route');
+        $route = new Part(new Method('GET,POST'), [], [], true);
 
-        new Part(self::getRoute(), true, new RoutePluginManager(new ServiceManager()));
+        $request = new ServerRequest([], [], new Uri('/foo'), 'PUT');
+        $result = $route->match($request, 4);
+        $this->assertTrue($result->isMethodFailure());
+        $this->assertArraySubset(['GET', 'POST'], $result->getAllowedMethods());
+        $this->assertCount(2, $result->getAllowedMethods());
     }
 
-    public function testNoMatchWithoutUriMethod()
+    public function testMethodFailureReturnsMethodFailureOnFullPathMatch()
     {
-        $route = self::getRoute();
-        $request = new BaseRequest();
-
-        $this->assertNull($route->match($request));
-    }
-
-    public function testGetAssembledParams()
-    {
-        $route = self::getRoute();
-        $route->assemble(['controller' => 'foo'], ['name' => 'baz/bat']);
-
-        $this->assertEquals([], $route->getAssembledParams());
-    }
-
-    public function testFactory()
-    {
-        $tester = new FactoryTester($this);
-        $tester->testFactory(
-            Part::class,
+        $route = new Part(
+            new Method('GET,POST'),
+            [],
             [
-                'route'         => 'Missing "route" in options array',
-                'route_plugins' => 'Missing "route_plugins" in options array',
+                'foo' => new Literal('/foo'),
             ],
-            [
-                'route'         => new Literal('/foo'),
-                'route_plugins' => self::getRoutePlugins(),
-            ]
+            true
         );
+
+        $request = new ServerRequest([], [], new Uri('/foo'), 'PUT');
+        $result = $route->match($request, 0);
+        $this->assertTrue($result->isMethodFailure());
+        $this->assertArraySubset(['GET', 'POST'], $result->getAllowedMethods());
+        $this->assertCount(2, $result->getAllowedMethods());
     }
 
-    /**
-     * @group ZF2-105
-     */
-    public function testFactoryShouldAcceptTraversableChildRoutes()
+    public function testMethodFailureReturnsFailureIfChildRoutesFail()
     {
-        $children = new ArrayObject([
-            'create' => [
-                'type'    => 'Literal',
-                'options' => [
-                    'route' => 'create',
-                    'defaults' => [
-                        'controller' => 'user-admin',
-                        'action'     => 'edit',
-                    ],
-                ],
+        $route = new Part(
+            new Method('GET,POST'),
+            [],
+            [
+                'foo' => new Literal('/foo'),
             ],
-        ]);
-        $options = [
-            'route'        => [
-                'type' => Literal::class,
-                'options' => [
-                    'route' => '/admin/users',
-                    'defaults' => [
-                        'controller' => 'Admin\UserController',
-                        'action'     => 'index',
-                    ],
-                ],
-            ],
-            'route_plugins' => self::getRoutePlugins(),
-            'may_terminate' => true,
-            'child_routes'  => $children,
-        ];
+            true
+        );
 
-        $route = Part::factory($options);
-        $this->assertInstanceOf(Part::class, $route);
+        $request = new ServerRequest([], [], new Uri('/bar'), 'PUT');
+        $result = $route->match($request, 0);
+        $this->assertTrue($result->isFailure());
+        $this->assertFalse($result->isMethodFailure());
+    }
+
+    public function testMethodFailureReturnsMethodIntersectionBetweenPartialAndChildRoutes()
+    {
+        $route = new Part(
+            new Method('GET,POST'),
+            [],
+            [
+                'foo' => new Part(
+                    new Literal('/foo'),
+                    [],
+                    [
+                        'verb' => new Method('POST,DELETE'),
+                    ]
+                ),
+            ],
+            true
+        );
+
+        $request = new ServerRequest([], [], new Uri('/foo'), 'PUT');
+        $result = $route->match($request, 0);
+        $this->assertTrue($result->isMethodFailure());
+        $this->assertEquals(['POST'], $result->getAllowedMethods());
+    }
+
+    public function testMethodFailureWithChildMethodsNotIntersectingIsAFailure()
+    {
+        $route = new Part(
+            new Method('GET,POST'),
+            [],
+            [
+                'foo' => new Part(
+                    new Literal('/foo'),
+                    [],
+                    [
+                        'verb' => new Method('PUT,DELETE'),
+                    ]
+                ),
+            ],
+            true
+        );
+
+        $request = new ServerRequest([], [], new Uri('/foo'), 'PUT');
+        $result = $route->match($request, 0);
+        $this->assertTrue($result->isFailure());
+        $this->assertFalse($result->isMethodFailure());
+    }
+
+    public function testChildMethodFailureWithParentPartSuccessReturnsMethodIntersection()
+    {
+        $route = new Part(
+            new Method('GET,POST,DELETE'),
+            [],
+            [
+                'foo' => new Part(
+                    new Literal('/foo'),
+                    [],
+                    [
+                        'verb' => new Method('POST, PUT,DELETE'),
+                    ]
+                ),
+            ],
+            true
+        );
+
+        $request = new ServerRequest([], [], new Uri('/foo'), 'GET');
+        $result = $route->match($request, 0);
+        $this->assertTrue($result->isMethodFailure());
+        $this->assertEquals(['POST', 'DELETE'], $result->getAllowedMethods());
+    }
+
+    public function testParentMethodFailureWithChildSuccessReturnsFullListOfMethods()
+    {
+        $route = new Part(
+            new Method('GET,POST,DELETE'),
+            [],
+            [
+                'foo' => new Part(
+                    new Literal('/foo'),
+                    [],
+                    [
+                        'verb' => new Method('DELETE,OPTIONS'),
+                    ]
+                ),
+            ],
+            true
+        );
+
+        $request = new ServerRequest([], [], new Uri('/foo'), 'OPTIONS');
+        $result = $route->match($request, 0);
+        $this->assertTrue($result->isMethodFailure());
+        $this->assertEquals(['DELETE'], $result->getAllowedMethods());
     }
 
     /**
@@ -410,73 +329,30 @@ class PartTest extends TestCase
      */
     public function testPartRouteMarkedAsMayTerminateCanMatchWhenQueryStringPresent()
     {
-        $options = [
-            'route' => [
-                'type' => Literal::class,
-                'options' => [
-                    'route' => '/resource',
-                    'defaults' => [
-                        'controller' => 'ResourceController',
-                        'action'     => 'resource',
-                    ],
-                ],
+        $route = new Part(
+            new Literal('/resource', ['controller' => 'ResourceController', 'action' => 'resource']),
+            [],
+            [
+                'child' => new Literal('/child'),
             ],
-            'route_plugins' => self::getRoutePlugins(),
-            'may_terminate' => true,
-            'child_routes'  => [
-                'child' => [
-                    'type' => Literal::class,
-                    'options' => [
-                        'route' => '/child',
-                        'defaults' => ['action' => 'child'],
-                    ],
-                ],
-            ],
-        ];
+            true
+        );
 
-        $route = Part::factory($options);
-        $request = new Request();
-        $request->setUri('http://example.com/resource?foo=bar');
-        $query = new Parameters(['foo' => 'bar']);
-        $request->setQuery($query);
-        $query = $request->getQuery();
+        $request = new ServerRequest([], [], new Uri('http://example.com/resource?foo=bar'));
+        $request = $request->withQueryParams(['foo' => 'bar']);
 
-        $match = $route->match($request);
-        $this->assertInstanceOf(\Zend\Router\RouteMatch::class, $match);
-        $this->assertEquals('resource', $match->getParam('action'));
+        $result = $route->match($request);
+        $this->assertTrue($result->isSuccess());
+        $this->assertEquals('resource', $result->getMatchedParams()['action']);
     }
 
-    /**
-     * @group 3711
-     */
-    public function testPartRouteMarkedAsMayTerminateButWithQueryRouteChildWillMatchChildRoute()
+    public function testRejectsNegativePathOffset()
     {
-        $options = [
-            'route' => [
-                'type' => Literal::class,
-                'options' => [
-                    'route' => '/resource',
-                    'defaults' => [
-                        'controller' => 'ResourceController',
-                        'action'     => 'resource',
-                    ],
-                ],
-            ],
-            'route_plugins' => self::getRoutePlugins(),
-            'may_terminate' => true,
-        ];
-
-        $route = Part::factory($options);
-        $request = new Request();
-        $request->setUri('http://example.com/resource?foo=bar');
-        $query = new Parameters(['foo' => 'bar']);
-        $request->setQuery($query);
-        $query = $request->getQuery();
-
-        /*
-        $match = $route->match($request);
-        $this->assertInstanceOf(\Zend\Router\RouteMatch::class, $match);
-        $this->assertEquals('string', $match->getParam('query'));
-        */
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Path offset cannot be negative');
+        $partial = $this->prophesize(PartialRouteInterface::class);
+        $request = $this->prophesize(ServerRequestInterface::class);
+        $route = new Part($partial->reveal(), [], new TreeRouteStack(), false);
+        $route->match($request->reveal(), -1);
     }
 }
