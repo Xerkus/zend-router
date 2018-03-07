@@ -1,204 +1,89 @@
 <?php
 /**
- * @link      http://github.com/zendframework/zend-router for the canonical source repository
- * @copyright Copyright (c) 2005-2016 Zend Technologies USA Inc. (http://www.zend.com)
- * @license   http://framework.zend.com/license/new-bsd New BSD License
+ *  @see       https://github.com/zendframework/zend-router for the canonical source repository
+ *  @copyright Copyright (c) 2015-2018 Zend Technologies USA Inc. (https://www.zend.com)
+ *  @license   https://github.com/zendframework/zend-router/blob/master/LICENSE.md New BSD License
  */
 
 declare(strict_types=1);
 
 namespace Zend\Router\Route;
 
-use ArrayObject;
-use Traversable;
-use Zend\Router\Exception;
-use Zend\Router\PriorityList;
-use Zend\Router\RoutePluginManager;
-use Zend\Router\TreeRouteStack;
-use Zend\Stdlib\ArrayUtils;
-use Zend\Stdlib\RequestInterface as Request;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UriInterface;
+use SplQueue;
+use Zend\Router\Exception\InvalidArgumentException;
+use Zend\Router\Route\Partial\FullMatch;
+use Zend\Router\RouteInterface;
+use Zend\Router\RouteResult;
 
-use function array_diff_key;
-use function array_flip;
-use function array_reverse;
-use function end;
-use function is_array;
-use function key;
-use function method_exists;
+use function get_class;
+use function gettype;
+use function is_object;
 use function sprintf;
-use function strlen;
 
 /**
  * Chain route.
  */
-class Chain extends TreeRouteStack implements PartialRouteInterface
+class Chain implements RouteInterface
 {
-    /**
-     * Chain routes.
-     *
-     * @var array
-     */
-    protected $chainRoutes;
+    /** @var SplQueue|PartialRouteInterface[] */
+    private $chain;
+
+    /** @var RouteInterface */
+    private $chainEnd;
 
     /**
-     * List of assembled parameters.
+     * Create a new chain route.
      *
-     * @var array
+     * @param PartialRouteInterface[] $routes
      */
-    protected $assembledParams = [];
-
-    /**
-     * Create a new part route.
-     *
-     * @param  array              $routes
-     * @param  RoutePluginManager $routePlugins
-     * @param  ArrayObject|null   $prototypes
-     */
-    public function __construct(array $routes, RoutePluginManager $routePlugins, ?ArrayObject $prototypes = null)
+    public function __construct(iterable $routes, ?RouteInterface $chainEnd = null)
     {
-        $this->chainRoutes = array_reverse($routes);
-        $this->routePluginManager = $routePlugins;
-        $this->routes = new PriorityList();
-        $this->prototypes = $prototypes;
-    }
-
-    /**
-     * factory(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::factory()
-     * @param  mixed $options
-     * @throws Exception\InvalidArgumentException
-     * @return Part
-     */
-    public static function factory($options = [])
-    {
-        if ($options instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($options);
-        } elseif (! is_array($options)) {
-            throw new Exception\InvalidArgumentException(sprintf(
-                '%s expects an array or Traversable set of options',
-                __METHOD__
-            ));
-        }
-
-        if (! isset($options['routes'])) {
-            throw new Exception\InvalidArgumentException('Missing "routes" in options array');
-        }
-
-        if (! isset($options['prototypes'])) {
-            $options['prototypes'] = null;
-        }
-
-        if ($options['routes'] instanceof Traversable) {
-            $options['routes'] = ArrayUtils::iteratorToArray($options['child_routes']);
-        }
-
-        if (! isset($options['route_plugins'])) {
-            throw new Exception\InvalidArgumentException('Missing "route_plugins" in options array');
-        }
-
-        return new static(
-            $options['routes'],
-            $options['route_plugins'],
-            $options['prototypes']
-        );
-    }
-
-    /**
-     * match(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::match()
-     * @param  Request  $request
-     * @param  int|null $pathOffset
-     * @param  array    $options
-     * @return RouteMatch|null
-     */
-    public function match(Request $request, $pathOffset = null, array $options = [])
-    {
-        if (! method_exists($request, 'getUri')) {
-            return;
-        }
-
-        if ($pathOffset === null) {
-            $mustTerminate = true;
-            $pathOffset = 0;
-        } else {
-            $mustTerminate = false;
-        }
-
-        if ($this->chainRoutes !== null) {
-            $this->addRoutes($this->chainRoutes);
-            $this->chainRoutes = null;
-        }
-
-        $match = new RouteMatch([]);
-        $uri = $request->getUri();
-        $pathLength = strlen($uri->getPath());
-
-        foreach ($this->routes as $route) {
-            $subMatch = $route->match($request, $pathOffset, $options);
-
-            if ($subMatch === null) {
-                return;
+        $this->chain = new SplQueue();
+        foreach ($routes as $route) {
+            if (! $route instanceof PartialRouteInterface) {
+                throw new InvalidArgumentException(sprintf(
+                    'Chained route must be instance of %s but %s given',
+                    PartialRouteInterface::class,
+                    is_object($route) ? get_class($route) : gettype($route)
+                ));
             }
-
-            $match->merge($subMatch);
-            $pathOffset += $subMatch->getLength();
+            $this->chain->enqueue($route);
         }
 
-        if ($mustTerminate && $pathOffset !== $pathLength) {
-            return;
-        }
-
-        return $match;
+        $this->chainEnd = $chainEnd ?? FullMatch::getInstance();
     }
 
     /**
-     * assemble(): Defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::assemble()
-     * @param  array $params
-     * @param  array $options
-     * @return mixed
+     * Match a given request.
      */
-    public function assemble(array $params = [], array $options = [])
+    public function match(Request $request, int $pathOffset = 0, array $options = []) : RouteResult
     {
-        if ($this->chainRoutes !== null) {
-            $this->addRoutes($this->chainRoutes);
-            $this->chainRoutes = null;
+        if ($this->chain->isEmpty()) {
+            return $this->chainEnd->match($request, $pathOffset, $options);
         }
 
-        $this->assembledParams = [];
+        $next = clone $this;
+        /** @var PartialRouteInterface $route */
+        $route = $next->chain->dequeue();
 
-        $routes = ArrayUtils::iteratorToArray($this->routes);
-
-        end($routes);
-        $lastRouteKey = key($routes);
-        $path = '';
-
-        foreach ($routes as $key => $route) {
-            $chainOptions = $options;
-            $hasChild = $options['has_child'] ?? false;
-
-            $chainOptions['has_child'] = ($hasChild || $key !== $lastRouteKey);
-
-            $path .= $route->assemble($params, $chainOptions);
-            $params = array_diff_key($params, array_flip($route->getAssembledParams()));
-
-            $this->assembledParams += $route->getAssembledParams();
-        }
-
-        return $path;
+        return $route->matchPartial($request, $next, $pathOffset, $options);
     }
 
     /**
-     * getAssembledParams(): defined by RouteInterface interface.
-     *
-     * @see    PartialRouteInterface::getAssembledParams
-     * @return array
+     * Assemble uri for the route.
      */
-    public function getAssembledParams()
+    public function assemble(UriInterface $uri, array $substitutions = [], array $options = []) : UriInterface
     {
-        return $this->assembledParams;
+        if ($this->chain->isEmpty()) {
+            return $this->chainEnd->assemble($uri, $substitutions, $options);
+        }
+
+        $next = clone $this;
+        /** @var PartialRouteInterface $route */
+        $route = $next->chain->dequeue();
+
+        return $route->assemblePartial($uri, $next, $substitutions, $options);
     }
 }
