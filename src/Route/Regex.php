@@ -9,21 +9,18 @@ declare(strict_types=1);
 
 namespace Zend\Router\Route;
 
-use Traversable;
-use Zend\Router\Exception;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UriInterface;
 use Zend\Router\Exception\InvalidArgumentException;
-use Zend\Stdlib\ArrayUtils;
-use Zend\Stdlib\RequestInterface as Request;
+use Zend\Router\RouteInterface;
+use Zend\Router\RouteResult;
 
 use function array_merge;
-use function is_array;
 use function is_int;
 use function is_numeric;
-use function method_exists;
 use function preg_match;
 use function rawurldecode;
 use function rawurlencode;
-use function sprintf;
 use function str_replace;
 use function strlen;
 use function strpos;
@@ -33,6 +30,8 @@ use function strpos;
  */
 class Regex implements PartialRouteInterface
 {
+    use PartialRouteTrait;
+
     /**
      * Regex to match.
      *
@@ -57,20 +56,9 @@ class Regex implements PartialRouteInterface
     protected $spec;
 
     /**
-     * List of assembled parameters.
-     *
-     * @var array
-     */
-    protected $assembledParams = [];
-
-    /**
      * Create a new regex route.
-     *
-     * @param  string $regex
-     * @param  string $spec
-     * @param  array  $defaults
      */
-    public function __construct($regex, $spec, array $defaults = [])
+    public function __construct(string $regex, string $spec, array $defaults = [])
     {
         $this->regex = $regex;
         $this->spec = $spec;
@@ -78,63 +66,24 @@ class Regex implements PartialRouteInterface
     }
 
     /**
-     * factory(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::factory()
-     * @param  array|Traversable $options
-     * @return Regex
      * @throws InvalidArgumentException
      */
-    public static function factory($options = [])
-    {
-        if ($options instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($options);
-        } elseif (! is_array($options)) {
-            throw new Exception\InvalidArgumentException(sprintf(
-                '%s expects an array or Traversable set of options',
-                __METHOD__
-            ));
+    public function matchPartial(
+        Request $request,
+        RouteInterface $next,
+        int $pathOffset = 0,
+        array $options = []
+    ) : RouteResult {
+        if ($pathOffset < 0) {
+            throw new InvalidArgumentException('Path offset cannot be negative');
         }
-
-        if (! isset($options['regex'])) {
-            throw new Exception\InvalidArgumentException('Missing "regex" in options array');
-        }
-
-        if (! isset($options['spec'])) {
-            throw new Exception\InvalidArgumentException('Missing "spec" in options array');
-        }
-
-        if (! isset($options['defaults'])) {
-            $options['defaults'] = [];
-        }
-
-        return new static($options['regex'], $options['spec'], $options['defaults']);
-    }
-
-    /**
-     * match(): defined by RouteInterface interface.
-     *
-     * @param  Request $request
-     * @param  int $pathOffset
-     * @return RouteMatch|null
-     */
-    public function match(Request $request, $pathOffset = null)
-    {
-        if (! method_exists($request, 'getUri')) {
-            return;
-        }
-
         $uri = $request->getUri();
         $path = $uri->getPath();
 
-        if ($pathOffset !== null) {
-            $result = preg_match('(\G' . $this->regex . ')', $path, $matches, 0, $pathOffset);
-        } else {
-            $result = preg_match('(^' . $this->regex . '$)', $path, $matches);
-        }
+        $result = preg_match('(\G' . $this->regex . ')', $path, $matches, 0, $pathOffset);
 
         if (! $result) {
-            return;
+            return RouteResult::fromRouteFailure();
         }
 
         $matchedLength = strlen($matches[0]);
@@ -147,22 +96,28 @@ class Regex implements PartialRouteInterface
             }
         }
 
-        return new RouteMatch(array_merge($this->defaults, $matches), $matchedLength);
+        $result = $next->match($request, $pathOffset + $matchedLength, $options);
+
+        if ($result->isFailure()) {
+            return $result;
+        }
+
+        if (empty($this->defaults) && empty($matches)) {
+            return $result;
+        }
+
+        return $result->withMatchedParams(array_merge($this->defaults, $matches, $result->getMatchedParams()));
     }
 
-    /**
-     * assemble(): Defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::assemble()
-     * @param  array $params
-     * @param  array $options
-     * @return mixed
-     */
-    public function assemble(array $params = [], array $options = [])
-    {
+    public function assemblePartial(
+        UriInterface $uri,
+        RouteInterface $next,
+        array $substitutions = [],
+        array $options = []
+    ) : UriInterface {
         $url = $this->spec;
-        $mergedParams = array_merge($this->defaults, $params);
-        $this->assembledParams = [];
+        $mergedParams = array_merge($this->defaults, $substitutions);
+        $assembledParams = [];
 
         foreach ($mergedParams as $key => $value) {
             $spec = '%' . $key . '%';
@@ -170,21 +125,12 @@ class Regex implements PartialRouteInterface
             if (strpos($url, $spec) !== false) {
                 $url = str_replace($spec, rawurlencode($value), $url);
 
-                $this->assembledParams[] = $key;
+                $assembledParams[] = $key;
             }
         }
 
-        return $url;
-    }
-
-    /**
-     * getAssembledParams(): defined by RouteInterface interface.
-     *
-     * @see    PartialRouteInterface::getAssembledParams
-     * @return array
-     */
-    public function getAssembledParams()
-    {
-        return $this->assembledParams;
+        $uri = $uri->withPath($uri->getPath() . $url);
+        // @TODO pass assembled params as options to next routes
+        return $next->assemble($uri, $substitutions, $options);
     }
 }
