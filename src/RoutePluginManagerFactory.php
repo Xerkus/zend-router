@@ -1,44 +1,32 @@
 <?php
 /**
- * @link      http://github.com/zendframework/zend-router for the canonical source repository
- * @copyright Copyright (c) 2005-2016 Zend Technologies USA Inc. (http://www.zend.com)
- * @license   http://framework.zend.com/license/new-bsd New BSD License
+ *  @see       https://github.com/zendframework/zend-router for the canonical source repository
+ *  @copyright Copyright (c) 2015-2018 Zend Technologies USA Inc. (https://www.zend.com)
+ *  @license   https://github.com/zendframework/zend-router/blob/master/LICENSE.md New BSD License
  */
 
 declare(strict_types=1);
 
 namespace Zend\Router;
 
-use Interop\Container\ContainerInterface;
-use Zend\ServiceManager\FactoryInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Psr\Container\ContainerInterface;
 
-class RoutePluginManagerFactory implements FactoryInterface
+class RoutePluginManagerFactory
 {
     /**
      * Create and return a route plugin manager.
-     *
-     * @param  ContainerInterface $container
-     * @param  string $name
-     * @param  null|array $options
-     * @return RoutePluginManager
      */
-    public function __invoke(ContainerInterface $container, $name, ?array $options = null)
+    public function __invoke(ContainerInterface $container) : RoutePluginManager
     {
-        $options = $options ?: [];
-        return new RoutePluginManager($container, $options);
+        $config = static::getRoutesConfig($container);
+        return new RoutePluginManager($container, $config);
     }
 
-    /**
-     * Create and return RoutePluginManager instance.
-     *
-     * For use with zend-servicemanager v2; proxies to __invoke().
-     *
-     * @param ServiceLocatorInterface $container
-     * @return RoutePluginManager
-     */
-    public function createService(ServiceLocatorInterface $container)
+    public static function getRoutesConfig(ContainerInterface $container) : array
     {
-        return $this($container, RoutePluginManager::class);
+        if (! $container->has('config')) {
+            return [];
+        }
+        return $container->get('config')[RoutePluginManager::class] ?? [];
     }
 }
