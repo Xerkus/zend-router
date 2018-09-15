@@ -25,6 +25,7 @@
         "zendframework/zend-stdlib": "^2.7.7 || ^3.2"
     },
     "require-dev": {
+        "phpstan/phpstan": "^0.10.3",
         "phpunit/phpunit": "^7.3",
         "zendframework/zend-coding-standard": "~1.0.0",
         "zendframework/zend-i18n": "^2.7.4"
@@ -62,6 +63,7 @@
         ],
         "cs-check": "phpcs",
         "cs-fix": "phpcbf",
+        "phpstan": "phpstan analyse",
         "test": "phpunit --colors=always",
         "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
     }
