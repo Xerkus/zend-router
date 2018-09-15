@@ -16,6 +16,12 @@
         "chat": "https://zendframework-slack.herokuapp.com",
         "forum": "https://discourse.zendframework.com/c/questions/components"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/xtreamwayz/zend-coding-standard.git"
+        }
+    ],
     "require": {
         "php": "^7.1",
         "container-interop/container-interop": "^1.2",
@@ -27,7 +33,7 @@
     "require-dev": {
         "phpstan/phpstan": "^0.10.3",
         "phpunit/phpunit": "^7.3",
-        "zendframework/zend-coding-standard": "~1.0.0",
+        "zendframework/zend-coding-standard": "dev-feature/new-rules#ea3de201619e9ac96201f37ad6bd62e6b117fa26",
         "zendframework/zend-i18n": "^2.7.4"
     },
     "suggest": {
