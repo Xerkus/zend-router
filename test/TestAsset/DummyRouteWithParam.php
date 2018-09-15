@@ -37,7 +37,7 @@ class DummyRouteWithParam extends DummyRoute
      * @param  array $options
      * @return mixed
      */
-    public function assemble(array $params = null, array $options = null)
+    public function assemble(?array $params = null, ?array $options = null)
     {
         if (isset($params['foo'])) {
             return $params['foo'];

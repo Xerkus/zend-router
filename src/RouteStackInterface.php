@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
+use Traversable;
+
 interface RouteStackInterface extends RouteInterface
 {
     /**
@@ -24,7 +26,7 @@ interface RouteStackInterface extends RouteInterface
     /**
      * Add multiple routes to the stack.
      *
-     * @param  array|\Traversable $routes
+     * @param  array|Traversable $routes
      * @return RouteStackInterface
      */
     public function addRoutes($routes);
@@ -40,7 +42,7 @@ interface RouteStackInterface extends RouteInterface
     /**
      * Remove all routes from the stack and set new ones.
      *
-     * @param  array|\Traversable $routes
+     * @param  array|Traversable $routes
      * @return RouteStackInterface
      */
     public function setRoutes($routes);

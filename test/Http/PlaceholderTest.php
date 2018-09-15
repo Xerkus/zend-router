@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * @link      https://github.com/zendframework/zend-router for the canonical source repository
  * @copyright Copyright (c) 2018 Zend Technologies USA Inc. (https://www.zend.com)
@@ -29,7 +32,7 @@ class PlaceholderTest extends TestCase
                         'route' => '/',
                         'defaults' => [
                             'controller' => 'AuthController',
-                            'action' => 'login'
+                            'action' => 'login',
                         ],
                     ],
                 ],
@@ -39,7 +42,7 @@ class PlaceholderTest extends TestCase
                         'route' => '/register',
                         'defaults' => [
                             'controller' => 'RegistrationController',
-                            'action' => 'register'
+                            'action' => 'register',
                         ],
                     ],
                 ],
@@ -103,10 +106,10 @@ class PlaceholderTest extends TestCase
                     'route' => '/home',
                     'defaults' => [
                         'controller' => 'HomeController',
-                        'action' => 'index'
+                        'action' => 'index',
                     ],
                 ],
-            ]
+            ],
         ];
 
         $homeAtRootAuthMoved = [
@@ -116,14 +119,14 @@ class PlaceholderTest extends TestCase
                     'route' => '/',
                     'defaults' => [
                         'controller' => 'HomeController',
-                        'action' => 'index'
+                        'action' => 'index',
                     ],
                 ],
             ],
             'auth' => [
                 'type' => Literal::class,
-                'options' => ['route' => '/auth']
-            ]
+                'options' => ['route' => '/auth'],
+            ],
         ];
 
         $homeAtRootAuthOnSubDomain = [
@@ -133,14 +136,14 @@ class PlaceholderTest extends TestCase
                     'route' => 'example.com',
                     'defaults' => [
                         'controller' => 'HomeController',
-                        'action' => 'index'
+                        'action' => 'index',
                     ],
                 ],
             ],
             'auth' => [
                 'type' => Hostname::class,
-                'options' => ['route' => 'auth.example.com']
-            ]
+                'options' => ['route' => 'auth.example.com'],
+            ],
         ];
 
         // @codingStandardsIgnoreStart

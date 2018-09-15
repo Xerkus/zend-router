@@ -46,9 +46,9 @@ class SchemeTest extends TestCase
 
     public function testAssembling()
     {
-        $uri   = new HttpUri();
+        $uri = new HttpUri();
         $route = new Scheme('https');
-        $path  = $route->assemble([], ['uri' => $uri]);
+        $path = $route->assemble([], ['uri' => $uri]);
 
         $this->assertEquals('', $path);
         $this->assertEquals('https', $uri->getScheme());
@@ -56,7 +56,7 @@ class SchemeTest extends TestCase
 
     public function testNoMatchWithoutUriMethod()
     {
-        $route   = new Scheme('https');
+        $route = new Scheme('https');
         $request = new BaseRequest();
 
         $this->assertNull($route->match($request));
@@ -75,12 +75,8 @@ class SchemeTest extends TestCase
         $tester = new FactoryTester($this);
         $tester->testFactory(
             Scheme::class,
-            [
-                'scheme' => 'Missing "scheme" in options array',
-            ],
-            [
-                'scheme' => 'http',
-            ]
+            ['scheme' => 'Missing "scheme" in options array'],
+            ['scheme' => 'http']
         );
     }
 }

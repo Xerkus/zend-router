@@ -39,7 +39,7 @@ class DummyRoute implements RouteInterface
      * @param  array $options
      * @return mixed
      */
-    public function assemble(array $params = null, array $options = null)
+    public function assemble(?array $params = null, ?array $options = null)
     {
         return '';
     }

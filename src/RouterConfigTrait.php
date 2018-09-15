@@ -11,6 +11,10 @@ namespace Zend\Router;
 
 use Interop\Container\ContainerInterface;
 
+use function call_user_func;
+use function class_exists;
+use function sprintf;
+
 trait RouterConfigTrait
 {
     /**

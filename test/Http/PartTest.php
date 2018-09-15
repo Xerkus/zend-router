@@ -26,6 +26,9 @@ use Zend\Stdlib\Parameters;
 use Zend\Stdlib\Request as BaseRequest;
 use ZendTest\Router\FactoryTester;
 
+use function strlen;
+use function strpos;
+
 /**
  * @covers \Zend\Router\Route\Part
  */
@@ -69,10 +72,8 @@ class PartTest extends TestCase
                 'type'    => Literal::class,
                 'options' => [
                     'route'    => '/foo',
-                    'defaults' => [
-                        'controller' => 'foo'
-                    ]
-                ]
+                    'defaults' => ['controller' => 'foo'],
+                ],
             ],
             true,
             self::getRoutePlugins(),
@@ -81,55 +82,43 @@ class PartTest extends TestCase
                     'type'    => Literal::class,
                     'options' => [
                         'route'    => '/bar',
-                        'defaults' => [
-                            'controller' => 'bar'
-                        ]
-                    ]
+                        'defaults' => ['controller' => 'bar'],
+                    ],
                 ],
                 'baz' => [
                     'type'    => Literal::class,
-                    'options' => [
-                        'route' => '/baz'
-                    ],
+                    'options' => ['route' => '/baz'],
                     'child_routes' => [
                         'bat' => [
                             'type'    => Segment::class,
-                            'options' => [
-                                'route' => '/:controller'
-                            ],
+                            'options' => ['route' => '/:controller'],
                             'may_terminate' => true,
                             'child_routes'  => [
                                 'wildcard' => [
-                                    'type' => Wildcard::class
-                                ]
-                            ]
-                        ]
-                    ]
+                                    'type' => Wildcard::class,
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
                 'bat' => [
                     'type'    => Segment::class,
                     'options' => [
                         'route'    => '/bat[/:foo]',
-                        'defaults' => [
-                            'foo' => 'bar'
-                        ]
+                        'defaults' => ['foo' => 'bar'],
                     ],
                     'may_terminate' => true,
                     'child_routes'  => [
                         'literal' => [
                             'type'   => Literal::class,
-                            'options' => [
-                                'route' => '/bar'
-                            ]
+                            'options' => ['route' => '/bar'],
                         ],
                         'optional' => [
                             'type'   => Segment::class,
-                            'options' => [
-                                'route' => '/bat[/:bar]'
-                            ]
+                            'options' => ['route' => '/bat[/:bar]'],
                         ],
-                    ]
-                ]
+                    ],
+                ],
             ]
         );
     }
@@ -143,9 +132,9 @@ class PartTest extends TestCase
                     'route' => '/[:controller[/:action]]',
                     'defaults' => [
                         'controller' => 'fo-fo',
-                        'action' => 'index'
-                    ]
-                ]
+                        'action' => 'index',
+                    ],
+                ],
             ],
             true,
             self::getRoutePlugins(),
@@ -154,8 +143,8 @@ class PartTest extends TestCase
                     'type' => Wildcard::class,
                     'options' => [
                         'key_value_delimiter' => '/',
-                        'param_delimiter' => '/'
-                    ]
+                        'param_delimiter' => '/',
+                    ],
                 ],
             ]
         );
@@ -169,77 +158,77 @@ class PartTest extends TestCase
                 '/foo',
                 null,
                 null,
-                ['controller' => 'foo']
+                ['controller' => 'foo'],
             ],
             'offset-skips-beginning' => [
                 self::getRoute(),
                 '/bar/foo',
                 4,
                 null,
-                ['controller' => 'foo']
+                ['controller' => 'foo'],
             ],
             'simple-child-match' => [
                 self::getRoute(),
                 '/foo/bar',
                 null,
                 'bar',
-                ['controller' => 'bar']
+                ['controller' => 'bar'],
             ],
             'offset-does-not-enable-partial-matching' => [
                 self::getRoute(),
                 '/foo/foo',
                 null,
                 null,
-                null
+                null,
             ],
             'offset-does-not-enable-partial-matching-in-child' => [
                 self::getRoute(),
                 '/foo/bar/baz',
                 null,
                 null,
-                null
+                null,
             ],
             'non-terminating-part-does-not-match' => [
                 self::getRoute(),
                 '/foo/baz',
                 null,
                 null,
-                null
+                null,
             ],
             'child-of-non-terminating-part-does-match' => [
                 self::getRoute(),
                 '/foo/baz/bat',
                 null,
                 'baz/bat',
-                ['controller' => 'bat']
+                ['controller' => 'bat'],
             ],
             'parameters-are-used-only-once' => [
                 self::getRoute(),
                 '/foo/baz/wildcard/foo/bar',
                 null,
                 'baz/bat/wildcard',
-                ['controller' => 'wildcard', 'foo' => 'bar']
+                ['controller' => 'wildcard', 'foo' => 'bar'],
             ],
             'optional-parameters-are-dropped-without-child' => [
                 self::getRoute(),
                 '/foo/bat',
                 null,
                 'bat',
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'optional-parameters-are-not-dropped-with-child' => [
                 self::getRoute(),
                 '/foo/bat/bar/bar',
                 null,
                 'bat/literal',
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'optional-parameters-not-required-in-last-part' => [
                 self::getRoute(),
                 '/foo/bat/bar/bat',
                 null,
                 'bat/optional',
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'simple-match' => [
                 self::getRouteAlternative(),
@@ -248,8 +237,8 @@ class PartTest extends TestCase
                 null,
                 [
                     'controller' => 'fo-fo',
-                    'action' => 'index'
-                ]
+                    'action' => 'index',
+                ],
             ],
             'match-wildcard' => [
                 self::getRouteAlternative(),
@@ -257,10 +246,10 @@ class PartTest extends TestCase
                 null,
                 'wildcard',
                 [
-                        'controller' => 'fo-fo',
-                        'action' => 'index',
-                        'param1' => 'value1'
-                ]
+                    'controller' => 'fo-fo',
+                    'action' => 'index',
+                    'param1' => 'value1',
+                ],
             ],
             /*
             'match-query' => array(
@@ -285,7 +274,7 @@ class PartTest extends TestCase
      * @param        string  $routeName
      * @param        array   $params
      */
-    public function testMatching(Part $route, $path, $offset, $routeName, array $params = null)
+    public function testMatching(Part $route, $path, $offset, $routeName, ?array $params = null)
     {
         $request = new Request();
         $request->setUri('http://example.com' . $path);
@@ -316,7 +305,7 @@ class PartTest extends TestCase
      * @param        string  $routeName
      * @param        array   $params
      */
-    public function testAssembling(Part $route, $path, $offset, $routeName, array $params = null)
+    public function testAssembling(Part $route, $path, $offset, $routeName, ?array $params = null)
     {
         if ($params === null) {
             // Data which will not match are not tested for assembling.
@@ -349,7 +338,7 @@ class PartTest extends TestCase
 
     public function testNoMatchWithoutUriMethod()
     {
-        $route   = self::getRoute();
+        $route = self::getRoute();
         $request = new BaseRequest();
 
         $this->assertNull($route->match($request));
@@ -370,10 +359,10 @@ class PartTest extends TestCase
             Part::class,
             [
                 'route'         => 'Missing "route" in options array',
-                'route_plugins' => 'Missing "route_plugins" in options array'
+                'route_plugins' => 'Missing "route_plugins" in options array',
             ],
             [
-                'route'         => new \Zend\Router\Http\Literal('/foo'),
+                'route'         => new Literal('/foo'),
                 'route_plugins' => self::getRoutePlugins(),
             ]
         );
@@ -439,9 +428,7 @@ class PartTest extends TestCase
                     'type' => Literal::class,
                     'options' => [
                         'route' => '/child',
-                        'defaults' => [
-                            'action' => 'child',
-                        ],
+                        'defaults' => ['action' => 'child'],
                     ],
                 ],
             ],

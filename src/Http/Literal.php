@@ -14,6 +14,12 @@ use Zend\Router\Exception;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function is_array;
+use function method_exists;
+use function sprintf;
+use function strlen;
+use function strpos;
+
 /**
  * Literal route.
  */
@@ -41,7 +47,7 @@ class Literal implements RouteInterface
      */
     public function __construct($route, array $defaults = [])
     {
-        $this->route    = $route;
+        $this->route = $route;
         $this->defaults = $defaults;
     }
 
@@ -80,16 +86,16 @@ class Literal implements RouteInterface
      *
      * @see    \Zend\Router\RouteInterface::match()
      * @param  Request      $request
-     * @param  integer|null $pathOffset
+     * @param  int|null $pathOffset
      * @return RouteMatch|null
      */
     public function match(Request $request, $pathOffset = null)
     {
         if (! method_exists($request, 'getUri')) {
-            return;
+            return null;
         }
 
-        $uri  = $request->getUri();
+        $uri = $request->getUri();
         $path = $uri->getPath();
 
         if ($pathOffset !== null) {
@@ -99,14 +105,12 @@ class Literal implements RouteInterface
                 }
             }
 
-            return;
+            return null;
         }
 
         if ($path === $this->route) {
             return new RouteMatch($this->defaults, strlen($this->route));
         }
-
-        return;
     }
 
     /**

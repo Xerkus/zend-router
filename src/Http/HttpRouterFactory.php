@@ -31,13 +31,13 @@ class HttpRouterFactory implements FactoryInterface
      * @param  null|array $options
      * @return RouteStackInterface
      */
-    public function __invoke(ContainerInterface $container, $name, array $options = null)
+    public function __invoke(ContainerInterface $container, $name, ?array $options = null)
     {
         $config = $container->has('config') ? $container->get('config') : [];
 
         // Defaults
-        $class  = TreeRouteStack::class;
-        $config = isset($config['router']) ? $config['router'] : [];
+        $class = TreeRouteStack::class;
+        $config = $config['router'] ?? [];
 
         return $this->createRouter($class, $config, $container);
     }

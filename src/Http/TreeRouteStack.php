@@ -19,6 +19,15 @@ use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 use Zend\Uri\Http as HttpUri;
 
+use function array_merge;
+use function explode;
+use function is_array;
+use function is_string;
+use function method_exists;
+use function rtrim;
+use function sprintf;
+use function strlen;
+
 /**
  * Tree search implementation.
  */
@@ -85,7 +94,7 @@ class TreeRouteStack extends SimpleRouteStack
      */
     protected function init()
     {
-        $this->prototypes = new ArrayObject;
+        $this->prototypes = new ArrayObject();
 
         (new Config([
             'aliases' => [
@@ -210,7 +219,7 @@ class TreeRouteStack extends SimpleRouteStack
                 'prototypes'    => $this->prototypes,
             ];
 
-            $priority = (isset($route->priority) ? $route->priority : null);
+            $priority = ($route->priority ?? null);
 
             $route = $this->routePluginManager->get('part', $options);
             $route->priority = $priority;
@@ -269,7 +278,7 @@ class TreeRouteStack extends SimpleRouteStack
             return $this->prototypes[$name];
         }
 
-        return;
+        return null;
     }
 
     /**
@@ -277,21 +286,21 @@ class TreeRouteStack extends SimpleRouteStack
      *
      * @see    \Zend\Router\RouteInterface::match()
      * @param  Request      $request
-     * @param  integer|null $pathOffset
+     * @param  int|null $pathOffset
      * @param  array        $options
      * @return RouteMatch|null
      */
     public function match(Request $request, $pathOffset = null, array $options = [])
     {
         if (! method_exists($request, 'getUri')) {
-            return;
+            return null;
         }
 
         if ($this->baseUrl === null && method_exists($request, 'getBaseUrl')) {
             $this->setBaseUrl($request->getBaseUrl());
         }
 
-        $uri           = $request->getUri();
+        $uri = $request->getUri();
         $baseUrlLength = strlen((string) $this->baseUrl) ?: null;
 
         if ($pathOffset !== null) {
@@ -324,7 +333,7 @@ class TreeRouteStack extends SimpleRouteStack
             }
         }
 
-        return;
+        return null;
     }
 
     /**

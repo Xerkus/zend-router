@@ -21,6 +21,10 @@ use Zend\Router\Http\Segment;
 use Zend\Stdlib\Request as BaseRequest;
 use ZendTest\Router\FactoryTester;
 
+use function implode;
+use function strlen;
+use function strpos;
+
 /**
  * @covers \Zend\Router\Route\Segment
  */
@@ -33,145 +37,145 @@ class SegmentTest extends TestCase
                 new Segment('/:foo'),
                 '/bar',
                 null,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'no-match-without-leading-slash' => [
                 new Segment(':foo'),
                 '/bar/',
                 null,
-                null
+                null,
             ],
             'no-match-with-trailing-slash' => [
                 new Segment('/:foo'),
                 '/bar/',
                 null,
-                null
+                null,
             ],
             'offset-skips-beginning' => [
                 new Segment(':foo'),
                 '/bar',
                 1,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'offset-enables-partial-matching' => [
                 new Segment('/:foo'),
                 '/bar/baz',
                 0,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'match-overrides-default' => [
                 new Segment('/:foo', [], ['foo' => 'baz']),
                 '/bar',
                 null,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'constraints-prevent-match' => [
                 new Segment('/:foo', ['foo' => '\d+']),
                 '/bar',
                 null,
-                null
+                null,
             ],
             'constraints-allow-match' => [
                 new Segment('/:foo', ['foo' => '\d+']),
                 '/123',
                 null,
-                ['foo' => '123']
+                ['foo' => '123'],
             ],
             'constraints-override-non-standard-delimiter' => [
                 new Segment('/:foo{-}/bar', ['foo' => '[^/]+']),
                 '/foo-bar/bar',
                 null,
-                ['foo' => 'foo-bar']
+                ['foo' => 'foo-bar'],
             ],
             'constraints-with-parantheses-dont-break-parameter-map' => [
                 new Segment('/:foo/:bar', ['foo' => '(bar)']),
                 '/bar/baz',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz']
+                ['foo' => 'bar', 'bar' => 'baz'],
             ],
             'simple-match-with-optional-parameter' => [
                 new Segment('/[:foo]', [], ['foo' => 'bar']),
                 '/',
                 null,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'optional-parameter-is-ignored' => [
                 new Segment('/:foo[/:bar]'),
                 '/bar',
                 null,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'optional-parameter-is-provided-with-default' => [
                 new Segment('/:foo[/:bar]', [], ['bar' => 'baz']),
                 '/bar',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz']
+                ['foo' => 'bar', 'bar' => 'baz'],
             ],
             'optional-parameter-is-consumed' => [
                 new Segment('/:foo[/:bar]'),
                 '/bar/baz',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz']
+                ['foo' => 'bar', 'bar' => 'baz'],
             ],
             'optional-group-is-discared-with-missing-parameter' => [
                 new Segment('/:foo[/:bar/:baz]', [], ['bar' => 'baz']),
                 '/bar',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz']
+                ['foo' => 'bar', 'bar' => 'baz'],
             ],
             'optional-group-within-optional-group-is-ignored' => [
                 new Segment('/:foo[/:bar[/:baz]]', [], ['bar' => 'baz', 'baz' => 'bat']),
                 '/bar',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'bat']
+                ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'bat'],
             ],
             'non-standard-delimiter-before-parameter' => [
                 new Segment('/foo-:bar'),
                 '/foo-baz',
                 null,
-                ['bar' => 'baz']
+                ['bar' => 'baz'],
             ],
             'non-standard-delimiter-between-parameters' => [
                 new Segment('/:foo{-}-:bar'),
                 '/bar-baz',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz']
+                ['foo' => 'bar', 'bar' => 'baz'],
             ],
             'non-standard-delimiter-before-optional-parameter' => [
                 new Segment('/:foo{-/}[-:bar]/:baz'),
                 '/bar-baz/bat',
                 null,
-                ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'bat']
+                ['foo' => 'bar', 'bar' => 'baz', 'baz' => 'bat'],
             ],
             'non-standard-delimiter-before-ignored-optional-parameter' => [
                 new Segment('/:foo{-/}[-:bar]/:baz'),
                 '/bar/bat',
                 null,
-                ['foo' => 'bar', 'baz' => 'bat']
+                ['foo' => 'bar', 'baz' => 'bat'],
             ],
             'parameter-with-dash-in-name' => [
                 new Segment('/:foo-bar'),
                 '/baz',
                 null,
-                ['foo-bar' => 'baz']
+                ['foo-bar' => 'baz'],
             ],
             'url-encoded-parameters-are-decoded' => [
                 new Segment('/:foo'),
                 '/foo%20bar',
                 null,
-                ['foo' => 'foo bar']
+                ['foo' => 'foo bar'],
             ],
             'urlencode-flaws-corrected' => [
                 new Segment('/:foo'),
                 "/!$&'()*,-.:;=@_~+",
                 null,
-                ['foo' => "!$&'()*,-.:;=@_~+"]
+                ['foo' => "!$&'()*,-.:;=@_~+"],
             ],
             'empty-matches-are-replaced-with-defaults' => [
                 new Segment('/foo[/:bar]/baz-:baz', [], ['bar' => 'bar']),
                 '/foo/baz-baz',
                 null,
-                ['bar' => 'bar', 'baz' => 'baz']
+                ['bar' => 'bar', 'baz' => 'baz'],
             ],
         ];
     }
@@ -205,28 +209,28 @@ class SegmentTest extends TestCase
                 '/framework',
                 null,
                 [],
-                ['translator' => $translator]
+                ['translator' => $translator],
             ],
             'translate-with-specific-locale' => [
                 new Segment('/{fw}', [], []),
                 '/baukasten',
                 null,
                 [],
-                ['translator' => $translator, 'locale' => 'de-DE']
+                ['translator' => $translator, 'locale' => 'de-DE'],
             ],
             'translate-uses-message-id-as-fallback' => [
                 new Segment('/{fw}', [], []),
                 '/fw',
                 null,
                 [],
-                ['translator' => $translator, 'locale' => 'fr-FR']
+                ['translator' => $translator, 'locale' => 'fr-FR'],
             ],
             'translate-with-specific-text-domain' => [
                 new Segment('/{fw}', [], []),
                 '/fw-alternative',
                 null,
                 [],
-                ['translator' => $translator, 'text_domain' => 'alternative']
+                ['translator' => $translator, 'text_domain' => 'alternative'],
             ],
         ];
     }
@@ -237,22 +241,22 @@ class SegmentTest extends TestCase
             'unbalanced-brackets' => [
                 '[',
                 RuntimeException::class,
-                'Found unbalanced brackets'
+                'Found unbalanced brackets',
             ],
             'closing-bracket-without-opening-bracket' => [
                 ']',
                 RuntimeException::class,
-                'Found closing bracket without matching opening bracket'
+                'Found closing bracket without matching opening bracket',
             ],
             'empty-parameter-name' => [
                 ':',
                 RuntimeException::class,
-                'Found empty parameter name'
+                'Found empty parameter name',
             ],
             'translated-literal-without-closing-backet' => [
                 '{test',
                 RuntimeException::class,
-                'Translated literal missing closing bracket'
+                'Translated literal missing closing bracket',
             ],
         ];
     }
@@ -265,7 +269,7 @@ class SegmentTest extends TestCase
      * @param        array   $params
      * @param        array   $options
      */
-    public function testMatching(Segment $route, $path, $offset, array $params = null, array $options = [])
+    public function testMatching(Segment $route, $path, $offset, ?array $params = null, array $options = [])
     {
         $request = new Request();
         $request->setUri('http://example.com' . $path);
@@ -294,7 +298,7 @@ class SegmentTest extends TestCase
      * @param        array   $params
      * @param        array   $options
      */
-    public function testAssembling(Segment $route, $path, $offset, array $params = null, array $options = [])
+    public function testAssembling(Segment $route, $path, $offset, ?array $params = null, array $options = [])
     {
         if ($params === null) {
             // Data which will not match are not tested for assembling.
@@ -318,7 +322,7 @@ class SegmentTest extends TestCase
      * @param        array   $params
      * @param        array   $options
      */
-    public function testMatchingWithL10n(Segment $route, $path, $offset, array $params = null, array $options = [])
+    public function testMatchingWithL10n(Segment $route, $path, $offset, ?array $params = null, array $options = [])
     {
         $request = new Request();
         $request->setUri('http://example.com' . $path);
@@ -347,7 +351,7 @@ class SegmentTest extends TestCase
      * @param        array   $params
      * @param        array   $options
      */
-    public function testAssemblingWithL10n(Segment $route, $path, $offset, array $params = null, array $options = [])
+    public function testAssemblingWithL10n(Segment $route, $path, $offset, ?array $params = null, array $options = [])
     {
         if ($params === null) {
             // Data which will not match are not tested for assembling.
@@ -405,7 +409,7 @@ class SegmentTest extends TestCase
 
     public function testNoMatchWithoutUriMethod()
     {
-        $route   = new Segment('/foo');
+        $route = new Segment('/foo');
         $request = new BaseRequest();
 
         $this->assertNull($route->match($request));
@@ -424,12 +428,10 @@ class SegmentTest extends TestCase
         $tester = new FactoryTester($this);
         $tester->testFactory(
             Segment::class,
-            [
-                'route' => 'Missing "route" in options array'
-            ],
+            ['route' => 'Missing "route" in options array'],
             [
                 'route'       => '/:foo[/:bar{-}]',
-                'constraints' => ['foo' => 'bar']
+                'constraints' => ['foo' => 'bar'],
             ]
         );
     }
@@ -441,8 +443,8 @@ class SegmentTest extends TestCase
         $raw = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`-=[]\\;\',.~!@$^&*()_+{}|:"<>';
         $request = new Request();
         $request->setUri('http://example.com/' . $raw);
-        $route   = new Segment('/:foo');
-        $match   = $route->match($request);
+        $route = new Segment('/:foo');
+        $match = $route->match($request);
 
         $this->assertSame($raw, $match->getParam('foo'));
     }
@@ -457,8 +459,8 @@ class SegmentTest extends TestCase
 
         $request = new Request();
         $request->setUri('http://example.com/' . $in);
-        $route   = new Segment('/:foo');
-        $match   = $route->match($request);
+        $route = new Segment('/:foo');
+        $match = $route->match($request);
 
         $this->assertSame($out, $match->getParam('foo'));
     }
@@ -466,9 +468,9 @@ class SegmentTest extends TestCase
     public function testEncodeCache()
     {
         $params1 = ['p1' => 6.123, 'p2' => 7];
-        $uri1 = 'example.com/'.implode('/', $params1);
+        $uri1 = 'example.com/' . implode('/', $params1);
         $params2 = ['p1' => 6, 'p2' => 'test'];
-        $uri2 = 'example.com/'.implode('/', $params2);
+        $uri2 = 'example.com/' . implode('/', $params2);
 
         $route = new Segment('example.com/:p1/:p2');
         $request = new Request();

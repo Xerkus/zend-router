@@ -19,19 +19,13 @@ use Zend\Uri\Http as HttpUri;
 
 class TranslatorAwareTreeRouteStackTest extends TestCase
 {
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $testFilesDir;
 
-    /**
-     * @var Translator
-     */
+    /** @var Translator */
     protected $translator;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     protected $fooRoute;
 
     public function setUp()
@@ -46,15 +40,11 @@ class TranslatorAwareTreeRouteStackTest extends TestCase
 
         $this->fooRoute = [
             'type' => 'Segment',
-            'options' => [
-                'route' => '/:locale',
-            ],
+            'options' => ['route' => '/:locale'],
             'child_routes' => [
                 'index' => [
                     'type' => 'Segment',
-                    'options' => [
-                        'route' => '/{homepage}',
-                    ],
+                    'options' => ['route' => '/{homepage}'],
                 ],
             ],
         ];
@@ -100,7 +90,7 @@ class TranslatorAwareTreeRouteStackTest extends TestCase
     public function testTranslatorIsPassedThroughMatchMethod()
     {
         $translator = new Translator();
-        $request    = new Request();
+        $request = new Request();
 
         $route = $this->getMock(RouteInterface::class);
         $route->expects($this->once())
@@ -120,7 +110,7 @@ class TranslatorAwareTreeRouteStackTest extends TestCase
     public function testTranslatorIsPassedThroughAssembleMethod()
     {
         $translator = new Translator();
-        $uri        = new HttpUri();
+        $uri = new HttpUri();
 
         $route = $this->getMock(RouteInterface::class);
         $route->expects($this->once())

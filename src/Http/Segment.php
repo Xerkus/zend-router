@@ -15,6 +15,19 @@ use Zend\Router\Exception;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function array_merge;
+use function count;
+use function is_array;
+use function method_exists;
+use function preg_match;
+use function preg_quote;
+use function rawurldecode;
+use function rawurlencode;
+use function sprintf;
+use function str_replace;
+use function strlen;
+use function strtr;
+
 /**
  * Segment route.
  */
@@ -40,21 +53,21 @@ class Segment implements RouteInterface
      * @var array
      */
     protected static $urlencodeCorrectionMap = [
-        '%21' => "!", // sub-delims
-        '%24' => "$", // sub-delims
-        '%26' => "&", // sub-delims
+        '%21' => '!', // sub-delims
+        '%24' => '$', // sub-delims
+        '%26' => '&', // sub-delims
         '%27' => "'", // sub-delims
-        '%28' => "(", // sub-delims
-        '%29' => ")", // sub-delims
-        '%2A' => "*", // sub-delims
-        '%2B' => "+", // sub-delims
-        '%2C' => ",", // sub-delims
+        '%28' => '(', // sub-delims
+        '%29' => ')', // sub-delims
+        '%2A' => '*', // sub-delims
+        '%2B' => '+', // sub-delims
+        '%2C' => ',', // sub-delims
 //      '%2D' => "-", // unreserved - not touched by rawurlencode
 //      '%2E' => ".", // unreserved - not touched by rawurlencode
-        '%3A' => ":", // pchar
-        '%3B' => ";", // sub-delims
-        '%3D' => "=", // sub-delims
-        '%40' => "@", // pchar
+        '%3A' => ':', // pchar
+        '%3B' => ';', // sub-delims
+        '%3D' => '=', // sub-delims
+        '%40' => '@', // pchar
 //      '%5F' => "_", // unreserved - not touched by rawurlencode
 //      '%7E' => "~", // unreserved - not touched by rawurlencode
     ];
@@ -111,8 +124,8 @@ class Segment implements RouteInterface
     public function __construct($route, array $constraints = [], array $defaults = [])
     {
         $this->defaults = $defaults;
-        $this->parts    = $this->parseRouteDefinition($route);
-        $this->regex    = $this->buildRegex($this->parts, $constraints);
+        $this->parts = $this->parseRouteDefinition($route);
+        $this->regex = $this->buildRegex($this->parts, $constraints);
     }
 
     /**
@@ -159,10 +172,10 @@ class Segment implements RouteInterface
     protected function parseRouteDefinition($def)
     {
         $currentPos = 0;
-        $length     = strlen($def);
-        $parts      = [];
+        $length = strlen($def);
+        $parts = [];
         $levelParts = [&$parts];
-        $level      = 0;
+        $level = 0;
 
         while ($currentPos < $length) {
             preg_match('(\G(?P<literal>[^:{\[\]]*)(?P<token>[:{\[\]]|$))', $def, $matches, 0, $currentPos);
@@ -187,7 +200,7 @@ class Segment implements RouteInterface
                 $levelParts[$level][] = [
                     'parameter',
                     $matches['name'],
-                    isset($matches['delimiters']) ? $matches['delimiters'] : null
+                    $matches['delimiters'] ?? null,
                 ];
 
                 $currentPos += strlen($matches[0]);
@@ -289,12 +302,12 @@ class Segment implements RouteInterface
             }
 
             $translator = $options['translator'];
-            $textDomain = (isset($options['text_domain']) ? $options['text_domain'] : 'default');
-            $locale     = (isset($options['locale']) ? $options['locale'] : null);
+            $textDomain = ($options['text_domain'] ?? 'default');
+            $locale = ($options['locale'] ?? null);
         }
 
-        $path      = '';
-        $skip      = true;
+        $path = '';
+        $skip = true;
         $skippable = false;
 
         foreach ($parts as $part) {
@@ -326,12 +339,12 @@ class Segment implements RouteInterface
                     break;
 
                 case 'optional':
-                    $skippable    = true;
+                    $skippable = true;
                     $optionalPart = $this->buildPath($part[1], $mergedParams, true, $hasChild, $options);
 
                     if ($optionalPart !== '') {
                         $path .= $optionalPart;
-                        $skip  = false;
+                        $skip = false;
                     }
                     break;
 
@@ -364,7 +377,7 @@ class Segment implements RouteInterface
             return;
         }
 
-        $uri  = $request->getUri();
+        $uri = $request->getUri();
         $path = $uri->getPath();
 
         $regex = $this->regex;
@@ -375,8 +388,8 @@ class Segment implements RouteInterface
             }
 
             $translator = $options['translator'];
-            $textDomain = (isset($options['text_domain']) ? $options['text_domain'] : 'default');
-            $locale     = (isset($options['locale']) ? $options['locale'] : null);
+            $textDomain = ($options['text_domain'] ?? 'default');
+            $locale = ($options['locale'] ?? null);
 
             foreach ($this->translationKeys as $key) {
                 $regex = str_replace('#' . $key . '#', $translator->translate($key, $textDomain, $locale), $regex);
@@ -394,7 +407,7 @@ class Segment implements RouteInterface
         }
 
         $matchedLength = strlen($matches[0]);
-        $params        = [];
+        $params = [];
 
         foreach ($this->paramMap as $index => $name) {
             if (isset($matches[$index]) && $matches[$index] !== '') {
@@ -421,7 +434,7 @@ class Segment implements RouteInterface
             $this->parts,
             array_merge($this->defaults, $params),
             false,
-            (isset($options['has_child']) ? $options['has_child'] : false),
+            ($options['has_child'] ?? false),
             $options
         );
     }

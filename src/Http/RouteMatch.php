@@ -11,6 +11,8 @@ namespace Zend\Router\Http;
 
 use Zend\Router\RouteMatch as BaseRouteMatch;
 
+use function array_merge;
+
 /**
  * Part route match.
  */
@@ -62,7 +64,7 @@ class RouteMatch extends BaseRouteMatch
      */
     public function merge(RouteMatch $match)
     {
-        $this->params  = array_merge($this->params, $match->getParams());
+        $this->params = array_merge($this->params, $match->getParams());
         $this->length += $match->getLength();
 
         $this->matchedRouteName = $match->getMatchedRouteName();

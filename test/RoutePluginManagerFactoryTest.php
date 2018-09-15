@@ -44,11 +44,13 @@ class RoutePluginManagerFactoryTest extends TestCase
 
     public function testInvocationCanProvideOptionsToThePluginManager()
     {
-        $options = ['factories' => [
-            'TestRoute' => function ($container) {
-                return $this->prophesize(RouteInterface::class)->reveal();
-            },
-        ]];
+        $options = [
+            'factories' => [
+                'TestRoute' => function ($container) {
+                    return $this->prophesize(RouteInterface::class)->reveal();
+                },
+            ],
+        ];
         $plugins = $this->factory->__invoke(
             $this->container->reveal(),
             RoutePluginManager::class,

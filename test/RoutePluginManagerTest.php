@@ -28,9 +28,11 @@ class RoutePluginManagerTest extends TestCase
 
     public function testCanLoadAnyRoute()
     {
-        $routes = new RoutePluginManager(new ServiceManager(), ['invokables' => [
-            'DummyRoute' => TestAsset\DummyRoute::class,
-        ]]);
+        $routes = new RoutePluginManager(new ServiceManager(), [
+            'invokables' => [
+                'DummyRoute' => TestAsset\DummyRoute::class,
+            ],
+        ]);
         $route = $routes->get('DummyRoute');
 
         $this->assertInstanceOf(TestAsset\DummyRoute::class, $route);

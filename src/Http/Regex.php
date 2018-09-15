@@ -11,8 +11,22 @@ namespace Zend\Router\Http;
 
 use Traversable;
 use Zend\Router\Exception;
+use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
+
+use function array_merge;
+use function is_array;
+use function is_int;
+use function is_numeric;
+use function method_exists;
+use function preg_match;
+use function rawurldecode;
+use function rawurlencode;
+use function sprintf;
+use function str_replace;
+use function strlen;
+use function strpos;
 
 /**
  * Regex route.
@@ -58,8 +72,8 @@ class Regex implements RouteInterface
      */
     public function __construct($regex, $spec, array $defaults = [])
     {
-        $this->regex    = $regex;
-        $this->spec     = $spec;
+        $this->regex = $regex;
+        $this->spec = $spec;
         $this->defaults = $defaults;
     }
 
@@ -69,7 +83,7 @@ class Regex implements RouteInterface
      * @see    \Zend\Router\RouteInterface::factory()
      * @param  array|Traversable $options
      * @return Regex
-     * @throws \Zend\Router\Exception\InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public static function factory($options = [])
     {
@@ -110,7 +124,7 @@ class Regex implements RouteInterface
             return;
         }
 
-        $uri  = $request->getUri();
+        $uri = $request->getUri();
         $path = $uri->getPath();
 
         if ($pathOffset !== null) {
@@ -146,8 +160,8 @@ class Regex implements RouteInterface
      */
     public function assemble(array $params = [], array $options = [])
     {
-        $url                   = $this->spec;
-        $mergedParams          = array_merge($this->defaults, $params);
+        $url = $this->spec;
+        $mergedParams = array_merge($this->defaults, $params);
         $this->assembledParams = [];
 
         foreach ($mergedParams as $key => $value) {

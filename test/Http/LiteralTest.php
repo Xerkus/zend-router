@@ -16,6 +16,9 @@ use Zend\Router\Http\RouteMatch;
 use Zend\Stdlib\Request as BaseRequest;
 use ZendTest\Router\FactoryTester;
 
+use function strlen;
+use function strpos;
+
 /**
  * @covers \Zend\Router\Route\Literal
  */
@@ -28,31 +31,31 @@ class LiteralTest extends TestCase
                 new Literal('/foo'),
                 '/foo',
                 null,
-                true
+                true,
             ],
             'no-match-without-leading-slash' => [
                 new Literal('foo'),
                 '/foo',
                 null,
-                false
+                false,
             ],
             'no-match-with-trailing-slash' => [
                 new Literal('/foo'),
                 '/foo/',
                 null,
-                false
+                false,
             ],
             'offset-skips-beginning' => [
                 new Literal('foo'),
                 '/foo',
                 1,
-                true
+                true,
             ],
             'offset-enables-partial-matching' => [
                 new Literal('/foo'),
                 '/foo/bar',
                 0,
-                true
+                true,
             ],
         ];
     }
@@ -106,7 +109,7 @@ class LiteralTest extends TestCase
 
     public function testNoMatchWithoutUriMethod()
     {
-        $route   = new Literal('/foo');
+        $route = new Literal('/foo');
         $request = new BaseRequest();
 
         $this->assertNull($route->match($request));
@@ -125,12 +128,8 @@ class LiteralTest extends TestCase
         $tester = new FactoryTester($this);
         $tester->testFactory(
             Literal::class,
-            [
-                'route' => 'Missing "route" in options array'
-            ],
-            [
-                'route' => '/foo'
-            ]
+            ['route' => 'Missing "route" in options array'],
+            ['route' => '/foo']
         );
     }
 

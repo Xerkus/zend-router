@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * @link      https://github.com/zendframework/zend-router for the canonical source repository
  * @copyright Copyright (c) 2018 Zend Technologies USA Inc. (https://www.zend.com)
@@ -11,6 +14,9 @@ use Traversable;
 use Zend\Router\Exception;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
+
+use function is_array;
+use function sprintf;
 
 /**
  * Placeholder route.
@@ -61,7 +67,7 @@ class Placeholder implements RouteInterface
      *
      * @see    \Zend\Router\RouteInterface::match()
      * @param  Request      $request
-     * @param  integer|null $pathOffset
+     * @param  int|null $pathOffset
      * @return RouteMatch|null
      */
     public function match(Request $request, $pathOffset = null)

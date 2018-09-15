@@ -25,6 +25,6 @@ class HttpRouterFactoryTest extends TestCase
             ],
         ];
 
-        $this->factory  = new HttpRouterFactory();
+        $this->factory = new HttpRouterFactory();
     }
 }

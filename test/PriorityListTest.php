@@ -17,9 +17,7 @@ use Zend\Router\PriorityList;
  */
 class PriorityListTest extends TestCase
 {
-    /**
-     * @var PriorityList
-     */
+    /** @var PriorityList */
     protected $list;
 
     public function setUp()

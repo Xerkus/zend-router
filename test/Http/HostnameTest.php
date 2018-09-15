@@ -30,37 +30,37 @@ class HostnameTest extends TestCase
             'simple-match' => [
                 new Hostname(':foo.example.com'),
                 'bar.example.com',
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'no-match-on-different-hostname' => [
                 new Hostname('foo.example.com'),
                 'bar.example.com',
-                null
+                null,
             ],
             'no-match-with-different-number-of-parts' => [
                 new Hostname('foo.example.com'),
                 'example.com',
-                null
+                null,
             ],
             'no-match-with-different-number-of-parts-2' => [
                 new Hostname('example.com'),
                 'foo.example.com',
-                null
+                null,
             ],
             'match-overrides-default' => [
                 new Hostname(':foo.example.com', [], ['foo' => 'baz']),
                 'bat.example.com',
-                ['foo' => 'bat']
+                ['foo' => 'bat'],
             ],
             'constraints-prevent-match' => [
                 new Hostname(':foo.example.com', ['foo' => '\d+']),
                 'bar.example.com',
-                null
+                null,
             ],
             'constraints-allow-match' => [
                 new Hostname(':foo.example.com', ['foo' => '\d+']),
                 '123.example.com',
-                ['foo' => '123']
+                ['foo' => '123'],
             ],
             'constraints-allow-match-2' => [
                 new Hostname(
@@ -69,7 +69,7 @@ class HostnameTest extends TestCase
                     ['domain'    => 'mydomain']
                 ),
                 'www.mydomain.com',
-                ['domain' => 'mydomain']
+                ['domain' => 'mydomain'],
             ],
             'optional-subdomain' => [
                 new Hostname('[:foo.]example.com'),
@@ -170,7 +170,7 @@ class HostnameTest extends TestCase
      * @param        string   $hostname
      * @param        array    $params
      */
-    public function testMatching(Hostname $route, $hostname, array $params = null)
+    public function testMatching(Hostname $route, $hostname, ?array $params = null)
     {
         $request = new Request();
         $request->setUri('http://' . $hostname . '/');
@@ -193,14 +193,14 @@ class HostnameTest extends TestCase
      * @param        string   $hostname
      * @param        array    $params
      */
-    public function testAssembling(Hostname $route, $hostname, array $params = null)
+    public function testAssembling(Hostname $route, $hostname, ?array $params = null)
     {
         if ($params === null) {
             // Data which will not match are not tested for assembling.
             return;
         }
 
-        $uri  = new HttpUri();
+        $uri = new HttpUri();
         $path = $route->assemble($params, ['uri' => $uri]);
 
         $this->assertEquals('', $path);
@@ -209,7 +209,7 @@ class HostnameTest extends TestCase
 
     public function testNoMatchWithoutUriMethod()
     {
-        $route   = new Hostname('example.com');
+        $route = new Hostname('example.com');
         $request = new BaseRequest();
 
         $this->assertNull($route->match($request));
@@ -218,7 +218,7 @@ class HostnameTest extends TestCase
     public function testAssemblingWithMissingParameter()
     {
         $route = new Hostname(':foo.example.com');
-        $uri   = new HttpUri();
+        $uri = new HttpUri();
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing parameter "foo"');
@@ -228,7 +228,7 @@ class HostnameTest extends TestCase
     public function testGetAssembledParams()
     {
         $route = new Hostname(':foo.example.com');
-        $uri   = new HttpUri();
+        $uri = new HttpUri();
         $route->assemble(['foo' => 'bar', 'baz' => 'bat'], ['uri' => $uri]);
 
         $this->assertEquals(['foo'], $route->getAssembledParams());
@@ -239,12 +239,8 @@ class HostnameTest extends TestCase
         $tester = new FactoryTester($this);
         $tester->testFactory(
             Hostname::class,
-            [
-                'route' => 'Missing "route" in options array'
-            ],
-            [
-                'route' => 'example.com'
-            ]
+            ['route' => 'Missing "route" in options array'],
+            ['route' => 'example.com']
         );
     }
 

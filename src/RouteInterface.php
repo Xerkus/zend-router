@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
+use Traversable;
 use Zend\Stdlib\RequestInterface as Request;
 
 /**
@@ -26,7 +27,7 @@ interface RouteInterface
     /**
      * Create a new route with given options.
      *
-     * @param  array|\Traversable $options
+     * @param  array|Traversable $options
      * @return void
      */
     public static function factory($options = []);

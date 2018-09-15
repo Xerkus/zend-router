@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace ZendTest\Router\TestAsset;
 
+use Traversable;
 use Zend\Router\RouteInterface;
 use Zend\Router\RouteMatch;
 use Zend\Stdlib\RequestInterface;
@@ -38,7 +39,7 @@ class DummyRoute implements RouteInterface
      * @param  array $options
      * @return mixed
      */
-    public function assemble(array $params = null, array $options = null)
+    public function assemble(?array $params = null, ?array $options = null)
     {
         return '';
     }
@@ -46,7 +47,7 @@ class DummyRoute implements RouteInterface
     /**
      * factory(): defined by RouteInterface interface
      *
-     * @param  array|\Traversable $options
+     * @param  array|Traversable $options
      * @return DummyRoute
      */
     public static function factory($options = [])

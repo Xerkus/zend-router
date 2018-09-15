@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace ZendTest\Router\TestAsset;
 
+use Traversable;
 use Zend\Router\RouteStackInterface;
 use Zend\Stdlib\RequestInterface as Request;
 
@@ -17,8 +18,7 @@ class Router implements RouteStackInterface
     /**
      * Create a new route with given options.
      *
-     * @param  array|\Traversable $options
-     * @return void
+     * @param  array|Traversable $options
      */
     public static function factory($options = [])
     {
@@ -33,6 +33,7 @@ class Router implements RouteStackInterface
      */
     public function match(Request $request)
     {
+        return null;
     }
 
     /**
@@ -44,6 +45,7 @@ class Router implements RouteStackInterface
      */
     public function assemble(array $params = [], array $options = [])
     {
+        return null;
     }
 
     /**
@@ -56,16 +58,18 @@ class Router implements RouteStackInterface
      */
     public function addRoute($name, $route, $priority = null)
     {
+        return null;
     }
 
     /**
      * Add multiple routes to the stack.
      *
-     * @param  array|\Traversable $routes
+     * @param  array|Traversable $routes
      * @return RouteStackInterface
      */
     public function addRoutes($routes)
     {
+        return null;
     }
 
     /**
@@ -76,15 +80,17 @@ class Router implements RouteStackInterface
      */
     public function removeRoute($name)
     {
+        return null;
     }
 
     /**
      * Remove all routes from the stack and set new ones.
      *
-     * @param  array|\Traversable $routes
+     * @param  array|Traversable $routes
      * @return RouteStackInterface
      */
     public function setRoutes($routes)
     {
+        return null;
     }
 }

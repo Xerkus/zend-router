@@ -17,6 +17,16 @@ use Zend\Router\RoutePluginManager;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function array_diff_key;
+use function array_flip;
+use function array_reverse;
+use function end;
+use function is_array;
+use function key;
+use function method_exists;
+use function sprintf;
+use function strlen;
+
 /**
  * Chain route.
  */
@@ -43,12 +53,12 @@ class Chain extends TreeRouteStack implements RouteInterface
      * @param  RoutePluginManager $routePlugins
      * @param  ArrayObject|null   $prototypes
      */
-    public function __construct(array $routes, RoutePluginManager $routePlugins, ArrayObject $prototypes = null)
+    public function __construct(array $routes, RoutePluginManager $routePlugins, ?ArrayObject $prototypes = null)
     {
-        $this->chainRoutes         = array_reverse($routes);
-        $this->routePluginManager  = $routePlugins;
-        $this->routes              = new PriorityList();
-        $this->prototypes          = $prototypes;
+        $this->chainRoutes = array_reverse($routes);
+        $this->routePluginManager = $routePlugins;
+        $this->routes = new PriorityList();
+        $this->prototypes = $prototypes;
     }
 
     /**
@@ -110,7 +120,7 @@ class Chain extends TreeRouteStack implements RouteInterface
 
         if ($pathOffset === null) {
             $mustTerminate = true;
-            $pathOffset    = 0;
+            $pathOffset = 0;
         } else {
             $mustTerminate = false;
         }
@@ -120,8 +130,8 @@ class Chain extends TreeRouteStack implements RouteInterface
             $this->chainRoutes = null;
         }
 
-        $match      = new RouteMatch([]);
-        $uri        = $request->getUri();
+        $match = new RouteMatch([]);
+        $uri = $request->getUri();
         $pathLength = strlen($uri->getPath());
 
         foreach ($this->routes as $route) {
@@ -163,16 +173,16 @@ class Chain extends TreeRouteStack implements RouteInterface
 
         end($routes);
         $lastRouteKey = key($routes);
-        $path         = '';
+        $path = '';
 
         foreach ($routes as $key => $route) {
             $chainOptions = $options;
-            $hasChild     = isset($options['has_child']) ? $options['has_child'] : false;
+            $hasChild = $options['has_child'] ?? false;
 
             $chainOptions['has_child'] = ($hasChild || $key !== $lastRouteKey);
 
-            $path   .= $route->assemble($params, $chainOptions);
-            $params  = array_diff_key($params, array_flip($route->getAssembledParams()));
+            $path .= $route->assemble($params, $chainOptions);
+            $params = array_diff_key($params, array_flip($route->getAssembledParams()));
 
             $this->assembledParams += $route->getAssembledParams();
         }

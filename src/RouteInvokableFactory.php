@@ -10,10 +10,14 @@ declare(strict_types=1);
 namespace Zend\Router;
 
 use Interop\Container\ContainerInterface;
-use Zend\ServiceManager\Exception\ServiceNotCreatedException;
 use Zend\ServiceManager\AbstractFactoryInterface;
+use Zend\ServiceManager\Exception\ServiceNotCreatedException;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
+
+use function class_exists;
+use function is_subclass_of;
+use function sprintf;
 
 /**
  * Specialized invokable/abstract factory for use with RoutePluginManager.
@@ -83,14 +87,14 @@ class RouteInvokableFactory implements
      * @param null|array $options
      * @return RouteInterface
      */
-    public function __invoke(ContainerInterface $container, $routeName, array $options = null)
+    public function __invoke(ContainerInterface $container, $routeName, ?array $options = null)
     {
         $options = $options ?: [];
 
         if (! class_exists($routeName)) {
             throw new ServiceNotCreatedException(sprintf(
                 '%s: failed retrieving invokable class "%s"; class does not exist',
-                __CLASS__,
+                self::class,
                 $routeName
             ));
         }
@@ -98,7 +102,7 @@ class RouteInvokableFactory implements
         if (! is_subclass_of($routeName, RouteInterface::class)) {
             throw new ServiceNotCreatedException(sprintf(
                 '%s: failed retrieving invokable class "%s"; class does not implement %s',
-                __CLASS__,
+                self::class,
                 $routeName,
                 RouteInterface::class
             ));

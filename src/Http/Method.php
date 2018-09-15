@@ -14,6 +14,14 @@ use Zend\Router\Exception;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function array_map;
+use function explode;
+use function in_array;
+use function is_array;
+use function method_exists;
+use function sprintf;
+use function strtoupper;
+
 /**
  * Method route.
  */
@@ -41,7 +49,7 @@ class Method implements RouteInterface
      */
     public function __construct($verb, array $defaults = [])
     {
-        $this->verb     = $verb;
+        $this->verb = $verb;
         $this->defaults = $defaults;
     }
 
@@ -85,18 +93,18 @@ class Method implements RouteInterface
     public function match(Request $request)
     {
         if (! method_exists($request, 'getMethod')) {
-            return;
+            return null;
         }
 
         $requestVerb = strtoupper($request->getMethod());
-        $matchVerbs  = explode(',', strtoupper($this->verb));
-        $matchVerbs  = array_map('trim', $matchVerbs);
+        $matchVerbs = explode(',', strtoupper($this->verb));
+        $matchVerbs = array_map('trim', $matchVerbs);
 
         if (in_array($requestVerb, $matchVerbs)) {
             return new RouteMatch($this->defaults);
         }
 
-        return;
+        return null;
     }
 
     /**

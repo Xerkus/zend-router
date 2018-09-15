@@ -25,7 +25,7 @@ class RouterFactory implements FactoryInterface
      * @param  null|array $options
      * @return RouteStackInterface
      */
-    public function __invoke(ContainerInterface $container, $name, array $options = null)
+    public function __invoke(ContainerInterface $container, $name, ?array $options = null)
     {
         return $container->get('HttpRouter');
     }

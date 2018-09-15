@@ -16,6 +16,9 @@ use Zend\Router\Http\RouteMatch;
 use Zend\Stdlib\Request as BaseRequest;
 use ZendTest\Router\FactoryTester;
 
+use function strlen;
+use function strpos;
+
 /**
  * @covers \Zend\Router\Route\Regex
  */
@@ -28,43 +31,43 @@ class RegexTest extends TestCase
                 new Regex('/(?<foo>[^/]+)', '/%foo%'),
                 '/bar',
                 null,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'no-match-without-leading-slash' => [
                 new Regex('(?<foo>[^/]+)', '%foo%'),
                 '/bar',
                 null,
-                null
+                null,
             ],
             'no-match-with-trailing-slash' => [
                 new Regex('/(?<foo>[^/]+)', '/%foo%'),
                 '/bar/',
                 null,
-                null
+                null,
             ],
             'offset-skips-beginning' => [
                 new Regex('(?<foo>[^/]+)', '%foo%'),
                 '/bar',
                 1,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'offset-enables-partial-matching' => [
                 new Regex('/(?<foo>[^/]+)', '/%foo%'),
                 '/bar/baz',
                 0,
-                ['foo' => 'bar']
+                ['foo' => 'bar'],
             ],
             'url-encoded-parameters-are-decoded' => [
                 new Regex('/(?<foo>[^/]+)', '/%foo%'),
                 '/foo%20bar',
                 null,
-                ['foo' => 'foo bar']
+                ['foo' => 'foo bar'],
             ],
             'empty-matches-are-replaced-with-defaults' => [
                 new Regex('/foo(?:/(?<bar>[^/]+))?/baz-(?<baz>[^/]+)', '/foo/baz-%baz%', ['bar' => 'bar']),
                 '/foo/baz-baz',
                 null,
-                ['bar' => 'bar', 'baz' => 'baz']
+                ['bar' => 'bar', 'baz' => 'baz'],
             ],
         ];
     }
@@ -76,7 +79,7 @@ class RegexTest extends TestCase
      * @param        int     $offset
      * @param        array   $params
      */
-    public function testMatching(Regex $route, $path, $offset, array $params = null)
+    public function testMatching(Regex $route, $path, $offset, ?array $params = null)
     {
         $request = new Request();
         $request->setUri('http://example.com' . $path);
@@ -104,7 +107,7 @@ class RegexTest extends TestCase
      * @param        int     $offset
      * @param        array   $params
      */
-    public function testAssembling(Regex $route, $path, $offset, array $params = null)
+    public function testAssembling(Regex $route, $path, $offset, ?array $params = null)
     {
         if ($params === null) {
             // Data which will not match are not tested for assembling.
@@ -122,7 +125,7 @@ class RegexTest extends TestCase
 
     public function testNoMatchWithoutUriMethod()
     {
-        $route   = new Regex('/foo', '/foo');
+        $route = new Regex('/foo', '/foo');
         $request = new BaseRequest();
 
         $this->assertNull($route->match($request));
@@ -143,11 +146,11 @@ class RegexTest extends TestCase
             Regex::class,
             [
                 'regex' => 'Missing "regex" in options array',
-                'spec'  => 'Missing "spec" in options array'
+                'spec'  => 'Missing "spec" in options array',
             ],
             [
                 'regex' => '/foo',
-                'spec'  => '/foo'
+                'spec'  => '/foo',
             ]
         );
     }
@@ -159,8 +162,8 @@ class RegexTest extends TestCase
         $raw = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`-=[]\\;\',.~!@$^&*()_+{}|:"<>';
         $request = new Request();
         $request->setUri('http://example.com/' . $raw);
-        $route   = new Regex('/(?<foo>[^/]+)', '/%foo%');
-        $match   = $route->match($request);
+        $route = new Regex('/(?<foo>[^/]+)', '/%foo%');
+        $match = $route->match($request);
 
         $this->assertSame($raw, $match->getParam('foo'));
     }
@@ -175,8 +178,8 @@ class RegexTest extends TestCase
 
         $request = new Request();
         $request->setUri('http://example.com/' . $in);
-        $route   = new Regex('/(?<foo>[^/]+)', '/%foo%');
-        $match   = $route->match($request);
+        $route = new Regex('/(?<foo>[^/]+)', '/%foo%');
+        $match = $route->match($request);
 
         $this->assertSame($out, $match->getParam('foo'));
     }

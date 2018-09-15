@@ -17,6 +17,13 @@ use Zend\Router\RoutePluginManager;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function array_diff_key;
+use function array_flip;
+use function is_array;
+use function method_exists;
+use function sprintf;
+use function strlen;
+
 /**
  * Part route.
  */
@@ -57,8 +64,8 @@ class Part extends TreeRouteStack implements RouteInterface
         $route,
         $mayTerminate,
         RoutePluginManager $routePlugins,
-        array $childRoutes = null,
-        ArrayObject $prototypes = null
+        ?array $childRoutes = null,
+        ?ArrayObject $prototypes = null
     ) {
         $this->routePluginManager = $routePlugins;
 
@@ -70,11 +77,11 @@ class Part extends TreeRouteStack implements RouteInterface
             throw new Exception\InvalidArgumentException('Base route may not be a part route');
         }
 
-        $this->route        = $route;
+        $this->route = $route;
         $this->mayTerminate = $mayTerminate;
-        $this->childRoutes  = $childRoutes;
-        $this->prototypes   = $prototypes;
-        $this->routes       = new PriorityList();
+        $this->childRoutes = $childRoutes;
+        $this->prototypes = $prototypes;
+        $this->routes = new PriorityList();
     }
 
     /**
@@ -134,7 +141,7 @@ class Part extends TreeRouteStack implements RouteInterface
      *
      * @see    \Zend\Router\RouteInterface::match()
      * @param  Request      $request
-     * @param  integer|null $pathOffset
+     * @param  int|null $pathOffset
      * @param  array        $options
      * @return RouteMatch|null
      */
@@ -154,7 +161,7 @@ class Part extends TreeRouteStack implements RouteInterface
 
             $nextOffset = $pathOffset + $match->getLength();
 
-            $uri        = $request->getUri();
+            $uri = $request->getUri();
             $pathLength = strlen($uri->getPath());
 
             if ($this->mayTerminate && $nextOffset === $pathLength) {
@@ -177,7 +184,7 @@ class Part extends TreeRouteStack implements RouteInterface
             }
         }
 
-        return;
+        return null;
     }
 
     /**
@@ -196,13 +203,13 @@ class Part extends TreeRouteStack implements RouteInterface
             $this->childRoutes = null;
         }
 
-        $options['has_child'] = (isset($options['name']));
+        $options['has_child'] = isset($options['name']);
 
         if (isset($options['translator']) && ! isset($options['locale']) && isset($params['locale'])) {
             $options['locale'] = $params['locale'];
         }
 
-        $path   = $this->route->assemble($params, $options);
+        $path = $this->route->assemble($params, $options);
         $params = array_diff_key($params, array_flip($this->route->getAssembledParams()));
 
         if (! isset($options['name'])) {
@@ -215,9 +222,7 @@ class Part extends TreeRouteStack implements RouteInterface
 
         unset($options['has_child']);
         $options['only_return_path'] = true;
-        $path .= parent::assemble($params, $options);
-
-        return $path;
+        return $path . parent::assemble($params, $options);
     }
 
     /**

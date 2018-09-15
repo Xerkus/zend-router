@@ -11,7 +11,14 @@ namespace Zend\Router;
 
 use Interop\Container\ContainerInterface;
 use Zend\ServiceManager\AbstractPluginManager;
+use Zend\ServiceManager\ConfigInterface;
 use Zend\ServiceManager\Exception\InvalidServiceException;
+
+use function array_merge;
+use function get_class;
+use function gettype;
+use function is_object;
+use function sprintf;
 
 /**
  * Plugin manager implementation for routes
@@ -52,7 +59,7 @@ class RoutePluginManager extends AbstractPluginManager
      * Ensure that the instance is seeded with the RouteInvokableFactory as an
      * abstract factory.
      *
-     * @param ContainerInterface|\Zend\ServiceManager\ConfigInterface $configOrContainerInstance
+     * @param ContainerInterface|ConfigInterface $configOrContainerInstance
      * @param array $v3config
      */
     public function __construct($configOrContainerInstance, array $v3config = [])
@@ -110,7 +117,7 @@ class RoutePluginManager extends AbstractPluginManager
     public function configure(array $config)
     {
         if (isset($config['invokables']) && ! empty($config['invokables'])) {
-            $aliases   = $this->createAliasesForInvokables($config['invokables']);
+            $aliases = $this->createAliasesForInvokables($config['invokables']);
             $factories = $this->createFactoriesForInvokables($config['invokables']);
 
             if (! empty($aliases)) {
@@ -130,15 +137,15 @@ class RoutePluginManager extends AbstractPluginManager
     }
 
      /**
-     * Create aliases for invokable classes.
-     *
-     * If an invokable service name does not match the class it maps to, this
-     * creates an alias to the class (which will later be mapped as an
-     * invokable factory).
-     *
-     * @param array $invokables
-     * @return array
-     */
+      * Create aliases for invokable classes.
+      *
+      * If an invokable service name does not match the class it maps to, this
+      * creates an alias to the class (which will later be mapped as an
+      * invokable factory).
+      *
+      * @param array $invokables
+      * @return array
+      */
     protected function createAliasesForInvokables(array $invokables)
     {
         $aliases = [];

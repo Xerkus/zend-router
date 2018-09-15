@@ -14,6 +14,15 @@ use Zend\Router\Exception;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function array_merge;
+use function count;
+use function is_array;
+use function method_exists;
+use function preg_match;
+use function preg_quote;
+use function sprintf;
+use function strlen;
+
 /**
  * Hostname route.
  */
@@ -64,8 +73,8 @@ class Hostname implements RouteInterface
     public function __construct($route, array $constraints = [], array $defaults = [])
     {
         $this->defaults = $defaults;
-        $this->parts    = $this->parseRouteDefinition($route);
-        $this->regex    = $this->buildRegex($this->parts, $constraints);
+        $this->parts = $this->parseRouteDefinition($route);
+        $this->regex = $this->buildRegex($this->parts, $constraints);
     }
 
     /**
@@ -112,10 +121,10 @@ class Hostname implements RouteInterface
     protected function parseRouteDefinition($def)
     {
         $currentPos = 0;
-        $length     = strlen($def);
-        $parts      = [];
+        $length = strlen($def);
+        $parts = [];
         $levelParts = [&$parts];
-        $level      = 0;
+        $level = 0;
 
         while ($currentPos < $length) {
             if (! preg_match('(\G(?P<literal>[a-z0-9-.]*)(?P<token>[:{\[\]]|$))', $def, $matches, 0, $currentPos)) {
@@ -142,7 +151,7 @@ class Hostname implements RouteInterface
                 $levelParts[$level][] = [
                     'parameter',
                     $matches['name'],
-                    isset($matches['delimiters']) ? $matches['delimiters'] : null
+                    $matches['delimiters'] ?? null,
                 ];
 
                 $currentPos += strlen($matches[0]);
@@ -224,8 +233,8 @@ class Hostname implements RouteInterface
      */
     protected function buildHost(array $parts, array $mergedParams, $isOptional)
     {
-        $host      = '';
-        $skip      = true;
+        $host = '';
+        $skip = true;
         $skippable = false;
 
         foreach ($parts as $part) {
@@ -256,12 +265,12 @@ class Hostname implements RouteInterface
                     break;
 
                 case 'optional':
-                    $skippable    = true;
+                    $skippable = true;
                     $optionalPart = $this->buildHost($part[1], $mergedParams, true);
 
                     if ($optionalPart !== '') {
                         $host .= $optionalPart;
-                        $skip  = false;
+                        $skip = false;
                     }
                     break;
             }
@@ -287,7 +296,7 @@ class Hostname implements RouteInterface
             return;
         }
 
-        $uri  = $request->getUri();
+        $uri = $request->getUri();
         $host = $uri->getHost();
 
         $result = preg_match('(^' . $this->regex . '$)', $host, $matches);

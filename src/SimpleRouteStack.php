@@ -14,6 +14,10 @@ use Zend\ServiceManager\ServiceManager;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function array_merge;
+use function is_array;
+use function sprintf;
+
 /**
  * Simple route stack implementation.
  */
@@ -45,7 +49,7 @@ class SimpleRouteStack implements RouteStackInterface
      *
      * @param RoutePluginManager $routePluginManager
      */
-    public function __construct(RoutePluginManager $routePluginManager = null)
+    public function __construct(?RoutePluginManager $routePluginManager = null)
     {
         $this->routes = new PriorityList();
 
@@ -311,7 +315,7 @@ class SimpleRouteStack implements RouteStackInterface
             }
         }
 
-        return;
+        return null;
     }
 
     /**

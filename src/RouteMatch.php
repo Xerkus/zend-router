@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
+use function array_key_exists;
+
 /**
  * RouteInterface match.
  */

@@ -9,8 +9,8 @@ declare(strict_types=1);
 
 namespace Zend\Router\Http;
 
-use Zend\I18n\Translator\TranslatorInterface as Translator;
 use Zend\I18n\Translator\TranslatorAwareInterface;
+use Zend\I18n\Translator\TranslatorInterface as Translator;
 use Zend\Router\Exception;
 use Zend\Stdlib\RequestInterface as Request;
 
@@ -45,7 +45,7 @@ class TranslatorAwareTreeRouteStack extends TreeRouteStack implements Translator
      *
      * @see    \Zend\Router\RouteInterface::match()
      * @param  Request      $request
-     * @param  integer|null $pathOffset
+     * @param  int|null $pathOffset
      * @param  array        $options
      * @return RouteMatch|null
      */
@@ -93,7 +93,7 @@ class TranslatorAwareTreeRouteStack extends TreeRouteStack implements Translator
      * @param  string     $textDomain
      * @return TreeRouteStack
      */
-    public function setTranslator(Translator $translator = null, $textDomain = null)
+    public function setTranslator(?Translator $translator = null, $textDomain = null)
     {
         $this->translator = $translator;
 

@@ -19,6 +19,9 @@ use Zend\Router\RoutePluginManager;
 use Zend\ServiceManager\ServiceManager;
 use ZendTest\Router\FactoryTester;
 
+use function strlen;
+use function strpos;
+
 /**
  * @covers \Zend\Router\Route\Chain
  */
@@ -34,18 +37,14 @@ class ChainTest extends TestCase
                     'type'    => Segment::class,
                     'options' => [
                         'route'    => '/:controller',
-                        'defaults' => [
-                            'controller' => 'foo',
-                        ],
+                        'defaults' => ['controller' => 'foo'],
                     ],
                 ],
                 [
                     'type'    => Segment::class,
                     'options' => [
                         'route'    => '/:bar',
-                        'defaults' => [
-                            'bar' => 'bar',
-                        ],
+                        'defaults' => ['bar' => 'bar'],
                     ],
                 ],
                 [
@@ -66,18 +65,14 @@ class ChainTest extends TestCase
                     'type'    => Segment::class,
                     'options' => [
                         'route'    => '/:controller',
-                        'defaults' => [
-                            'controller' => 'foo',
-                        ],
+                        'defaults' => ['controller' => 'foo'],
                     ],
                 ],
                 [
                     'type'    => Segment::class,
                     'options' => [
                         'route'    => '[/:bar]',
-                        'defaults' => [
-                            'bar' => 'bar',
-                        ],
+                        'defaults' => ['bar' => 'bar'],
                     ],
                 ],
             ],
@@ -143,7 +138,7 @@ class ChainTest extends TestCase
      * @param        int     $offset
      * @param        array   $params
      */
-    public function testMatching(Chain $route, $path, $offset, array $params = null)
+    public function testMatching(Chain $route, $path, $offset, ?array $params = null)
     {
         $request = new Request();
         $request->setUri('http://example.com' . $path);
@@ -171,7 +166,7 @@ class ChainTest extends TestCase
      * @param        int     $offset
      * @param        array   $params
      */
-    public function testAssembling(Chain $route, $path, $offset, array $params = null)
+    public function testAssembling(Chain $route, $path, $offset, ?array $params = null)
     {
         if ($params === null) {
             // Data which will not match are not tested for assembling.

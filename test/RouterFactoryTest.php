@@ -9,13 +9,14 @@ declare(strict_types=1);
 
 namespace ZendTest\Router;
 
-use Interop\Container\ContainerInterface;
 use PHPUnit\Framework\TestCase;
 use Zend\Router\Http\HttpRouterFactory;
 use Zend\Router\RoutePluginManager;
 use Zend\Router\RouterFactory;
 use Zend\ServiceManager\Config;
 use Zend\ServiceManager\ServiceManager;
+
+use function array_merge_recursive;
 
 /**
  * @covers \Zend\Router\RouterFactory
@@ -33,22 +34,19 @@ class RouterFactoryTest extends TestCase
             ],
         ];
 
-        $this->factory  = new RouterFactory();
-    }
-
-    private function createContainer()
-    {
-        return $this->prophesize(ContainerInterface::class)->reveal();
+        $this->factory = new RouterFactory();
     }
 
     public function testFactoryCanCreateRouterBasedOnConfiguredName()
     {
         $config = new Config(array_merge_recursive($this->defaultServiceConfig, [
-            'services' => [ 'config' => [
-                'router' => [
-                    'router_class' => TestAsset\Router::class,
+            'services' => [
+                'config' => [
+                    'router' => [
+                        'router_class' => TestAsset\Router::class,
+                    ],
                 ],
-            ]],
+            ],
         ]));
         $services = new ServiceManager();
         $config->configureServiceManager($services);
@@ -60,11 +58,13 @@ class RouterFactoryTest extends TestCase
     public function testFactoryCanCreateRouterWhenOnlyHttpRouterConfigPresent()
     {
         $config = new Config(array_merge_recursive($this->defaultServiceConfig, [
-            'services' => [ 'config' => [
-                'router' => [
-                    'router_class' => TestAsset\Router::class,
+            'services' => [
+                'config' => [
+                    'router' => [
+                        'router_class' => TestAsset\Router::class,
+                    ],
                 ],
-            ]],
+            ],
         ]));
         $services = new ServiceManager();
         $config->configureServiceManager($services);

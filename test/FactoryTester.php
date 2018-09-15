@@ -11,6 +11,7 @@ namespace ZendTest\Router;
 
 use ArrayIterator;
 use PHPUnit\Framework\TestCase;
+use Zend\Router\Exception\InvalidArgumentException;
 
 /**
  * Helper to test route factories.
@@ -37,7 +38,7 @@ class FactoryTester
     /**
      * Test a factory.
      *
-     * @param  string $className
+     * @param string $classname
      * @return void
      */
     public function testFactory($classname, array $requiredOptions, array $options)
@@ -46,7 +47,7 @@ class FactoryTester
         try {
             $classname::factory(0);
             $this->testCase->fail('An expected exception was not thrown');
-        } catch (\Zend\Router\Exception\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $this->testCase->assertContains('factory expects an array or Traversable set of options', $e->getMessage());
         }
 
@@ -59,7 +60,7 @@ class FactoryTester
             try {
                 $classname::factory($testOptions);
                 $this->testCase->fail('An expected exception was not thrown');
-            } catch (\Zend\Router\Exception\InvalidArgumentException $e) {
+            } catch (InvalidArgumentException $e) {
                 $this->testCase->assertContains($exceptionMessage, $e->getMessage());
             }
         }

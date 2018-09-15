@@ -14,6 +14,10 @@ use Zend\Router\Exception;
 use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 
+use function is_array;
+use function method_exists;
+use function sprintf;
+
 /**
  * Scheme route.
  */
@@ -41,7 +45,7 @@ class Scheme implements RouteInterface
      */
     public function __construct($scheme, array $defaults = [])
     {
-        $this->scheme   = $scheme;
+        $this->scheme = $scheme;
         $this->defaults = $defaults;
     }
 
@@ -88,7 +92,7 @@ class Scheme implements RouteInterface
             return;
         }
 
-        $uri    = $request->getUri();
+        $uri = $request->getUri();
         $scheme = $uri->getScheme();
 
         if ($scheme !== $this->scheme) {
