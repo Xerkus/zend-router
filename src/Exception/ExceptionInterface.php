@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Zend\Router\Exception;
 
-interface ExceptionInterface
+use Throwable;
+
+interface ExceptionInterface extends Throwable
 {
 }
