@@ -13,23 +13,10 @@ use ArrayIterator;
 use PHPUnit\Framework\TestCase;
 use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
-use Zend\Router\RouteMatch;
-use Zend\Router\RoutePluginManager;
 use Zend\Router\SimpleRouteStack;
-use Zend\ServiceManager\ServiceManager;
-use Zend\Stdlib\Request;
 
 class SimpleRouteStackTest extends TestCase
 {
-    public function testSetRoutePluginManager()
-    {
-        $routes = new RoutePluginManager(new ServiceManager());
-        $stack = new SimpleRouteStack();
-        $stack->setRoutePluginManager($routes);
-
-        $this->assertEquals($routes, $stack->getRoutePluginManager());
-    }
-
     public function testAddRoutesWithInvalidArgument()
     {
         $stack = new SimpleRouteStack();
@@ -246,20 +233,6 @@ class SimpleRouteStackTest extends TestCase
         $stack->setDefaultParam('foo', 'baz');
 
         $this->assertEquals('bar', $stack->assemble(['foo' => 'bar'], ['name' => 'foo']));
-    }
-
-    public function testFactory()
-    {
-        $tester = new FactoryTester($this);
-        $tester->testFactory(
-            SimpleRouteStack::class,
-            [],
-            [
-                'route_plugins'  => new RoutePluginManager(new ServiceManager()),
-                'routes'         => [],
-                'default_params' => [],
-            ]
-        );
     }
 
     public function testGetRoutes()
