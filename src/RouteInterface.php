@@ -9,8 +9,9 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
-use Traversable;
-use Zend\Stdlib\RequestInterface as Request;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UriInterface;
+use Zend\Router\Exception\RuntimeException;
 
 /**
  * RouteInterface interface.
@@ -18,34 +19,18 @@ use Zend\Stdlib\RequestInterface as Request;
 interface RouteInterface
 {
     /**
-     * Priority used for route stacks.
-     *
-     * @var int
-     * public $priority;
-     */
-
-    /**
-     * Create a new route with given options.
-     *
-     * @param  array|Traversable $options
-     * @return void
-     */
-    public static function factory($options = []);
-
-    /**
      * Match a given request.
      *
-     * @param  Request $request
-     * @return RouteMatch|null
+     * @param int $pathOffset URI path offset to use for matching
      */
-    public function match(Request $request);
+    public function match(Request $request, int $pathOffset = 0, array $options = []) : RouteResult;
 
     /**
-     * Assemble the route.
+     * Generate a URI
      *
-     * @param  array $params
-     * @param  array $options
-     * @return mixed
+     * @param UriInterface $uri Base URI instance. Assembled URI path should
+     *      append to path present in base URI.
+     * @throws RuntimeException if unable to generate the given URI
      */
-    public function assemble(array $params = [], array $options = []);
+    public function assemble(UriInterface $uri, array $substitutions = [], array $options = []) : UriInterface;
 }

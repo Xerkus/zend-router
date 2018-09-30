@@ -9,41 +9,45 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
-use Traversable;
-
+/**
+ * Immutable interface is not used to minimize performance impact
+ * of having to clone every parent route in chain in order to
+ * programmatically modify configured routes in router.
+ * Mutability makes route instance reuse potentially unsafe.
+ */
 interface RouteStackInterface extends RouteInterface
 {
     /**
      * Add a route to the stack.
-     *
-     * @param  string  $name
-     * @param  mixed   $route
-     * @param  int $priority
-     * @return RouteStackInterface
      */
-    public function addRoute($name, $route, $priority = null);
+    public function addRoute(string $name, RouteInterface $route, ?int $priority = null) : void;
+
+    /**
+     * Get route by name
+     */
+    public function getRoute(string $name) : ?RouteInterface;
+
+    /**
+     * Remove a route from the stack.
+     */
+    public function removeRoute(string $name) : void;
 
     /**
      * Add multiple routes to the stack.
      *
-     * @param  array|Traversable $routes
-     * @return RouteStackInterface
+     * @param  RouteInterface[] $routes Route map $name => $route
      */
-    public function addRoutes($routes);
-
-    /**
-     * Remove a route from the stack.
-     *
-     * @param  string $name
-     * @return RouteStackInterface
-     */
-    public function removeRoute($name);
+    public function addRoutes(iterable $routes) : void;
 
     /**
      * Remove all routes from the stack and set new ones.
      *
-     * @param  array|Traversable $routes
-     * @return RouteStackInterface
+     * @param  RouteInterface[] $routes Route map $name => $route
      */
-    public function setRoutes($routes);
+    public function setRoutes(iterable $routes) : void;
+
+    /**
+     * @return RouteInterface[] Route map $name => $route
+     */
+    public function getRoutes() : array;
 }
