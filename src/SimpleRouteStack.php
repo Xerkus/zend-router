@@ -10,9 +10,7 @@ declare(strict_types=1);
 namespace Zend\Router;
 
 use Traversable;
-use Zend\ServiceManager\ServiceManager;
 use Zend\Stdlib\ArrayUtils;
-use Zend\Stdlib\RequestInterface as Request;
 
 use function array_merge;
 use function is_array;
@@ -31,13 +29,6 @@ class SimpleRouteStack implements RouteStackInterface
     protected $routes;
 
     /**
-     * Route plugin manager
-     *
-     * @var RoutePluginManager
-     */
-    protected $routePluginManager;
-
-    /**
      * Default parameters.
      *
      * @var array
@@ -46,88 +37,10 @@ class SimpleRouteStack implements RouteStackInterface
 
     /**
      * Create a new simple route stack.
-     *
-     * @param RoutePluginManager $routePluginManager
      */
-    public function __construct(?RoutePluginManager $routePluginManager = null)
+    public function __construct()
     {
         $this->routes = new PriorityList();
-
-        if (null === $routePluginManager) {
-            $routePluginManager = new RoutePluginManager(new ServiceManager());
-        }
-
-        $this->routePluginManager = $routePluginManager;
-
-        $this->init();
-    }
-
-    /**
-     * factory(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::factory()
-     * @param  array|Traversable $options
-     * @return SimpleRouteStack
-     * @throws Exception\InvalidArgumentException
-     */
-    public static function factory($options = [])
-    {
-        if ($options instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($options);
-        } elseif (! is_array($options)) {
-            throw new Exception\InvalidArgumentException(sprintf(
-                '%s expects an array or Traversable set of options',
-                __METHOD__
-            ));
-        }
-
-        $routePluginManager = null;
-        if (isset($options['route_plugins'])) {
-            $routePluginManager = $options['route_plugins'];
-        }
-
-        $instance = new static($routePluginManager);
-
-        if (isset($options['routes'])) {
-            $instance->addRoutes($options['routes']);
-        }
-
-        if (isset($options['default_params'])) {
-            $instance->setDefaultParams($options['default_params']);
-        }
-
-        return $instance;
-    }
-
-    /**
-     * Init method for extending classes.
-     *
-     * @return void
-     */
-    protected function init()
-    {
-    }
-
-    /**
-     * Set the route plugin manager.
-     *
-     * @param  RoutePluginManager $routePlugins
-     * @return SimpleRouteStack
-     */
-    public function setRoutePluginManager(RoutePluginManager $routePlugins)
-    {
-        $this->routePluginManager = $routePlugins;
-        return $this;
-    }
-
-    /**
-     * Get the route plugin manager.
-     *
-     * @return RoutePluginManager
-     */
-    public function getRoutePluginManager()
-    {
-        return $this->routePluginManager;
     }
 
     /**
