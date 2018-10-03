@@ -9,11 +9,12 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
-use Traversable;
-use Zend\Stdlib\ArrayUtils;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UriInterface;
+use Zend\Router\Exception\InvalidArgumentException;
+use Zend\Router\Exception\RuntimeException;
 
 use function array_merge;
-use function is_array;
 use function sprintf;
 
 /**
@@ -44,217 +45,143 @@ class SimpleRouteStack implements RouteStackInterface
     }
 
     /**
-     * addRoutes(): defined by RouteStackInterface interface.
-     *
-     * @see    RouteStackInterface::addRoutes()
-     * @param  array|Traversable $routes
-     * @return SimpleRouteStack
-     * @throws Exception\InvalidArgumentException
+     * @return RouteInterface[] Route map $name => $route
      */
-    public function addRoutes($routes)
+    public function getRoutes() : array
     {
-        if (! is_array($routes) && ! $routes instanceof Traversable) {
-            throw new Exception\InvalidArgumentException('addRoutes expects an array or Traversable set of routes');
-        }
-
-        foreach ($routes as $name => $route) {
-            $this->addRoute($name, $route);
-        }
-
-        return $this;
+        return $this->routes->toArray($this->routes::EXTR_DATA);
     }
 
     /**
-     * addRoute(): defined by RouteStackInterface interface.
+     * Remove all routes from the stack and set new ones.
      *
-     * @see    RouteStackInterface::addRoute()
-     * @param  string  $name
-     * @param  mixed   $route
-     * @param  int $priority
-     * @return SimpleRouteStack
+     * @param  RouteInterface[] $routes Route map $name => $route
      */
-    public function addRoute($name, $route, $priority = null)
+    public function setRoutes(iterable $routes) : void
     {
-        if (! $route instanceof RouteInterface) {
-            $route = $this->routeFromArray($route);
-        }
+        $this->routes->clear();
+        $this->addRoutes($routes);
+    }
 
+    /**
+     * Add multiple routes to the stack.
+     *
+     * @param  RouteInterface[] $routes Route map $name => $route
+     */
+    public function addRoutes(iterable $routes) : void
+    {
+        foreach ($routes as $name => $route) {
+            $this->addRoute($name, $route);
+        }
+    }
+
+    /**
+     * Add a route to the stack.
+     */
+    public function addRoute(string $name, RouteInterface $route, ?int $priority = null) : void
+    {
         if ($priority === null && isset($route->priority)) {
             $priority = $route->priority;
         }
 
         $this->routes->insert($name, $route, $priority);
-
-        return $this;
     }
 
     /**
-     * removeRoute(): defined by RouteStackInterface interface.
-     *
-     * @see    RouteStackInterface::removeRoute()
-     * @param  string $name
-     * @return SimpleRouteStack
+     * Get route by name
      */
-    public function removeRoute($name)
-    {
-        $this->routes->remove($name);
-        return $this;
-    }
-
-    /**
-     * setRoutes(): defined by RouteStackInterface interface.
-     *
-     * @param  array|Traversable $routes
-     * @return SimpleRouteStack
-     */
-    public function setRoutes($routes)
-    {
-        $this->routes->clear();
-        $this->addRoutes($routes);
-        return $this;
-    }
-
-    /**
-     * Get the added routes
-     *
-     * @return Traversable list of all routes
-     */
-    public function getRoutes()
-    {
-        return $this->routes;
-    }
-
-    /**
-     * Check if a route with a specific name exists
-     *
-     * @param  string $name
-     * @return bool true if route exists
-     */
-    public function hasRoute($name)
-    {
-        return $this->routes->get($name) !== null;
-    }
-
-    /**
-     * Get a route by name
-     *
-     * @param string $name
-     * @return RouteInterface the route
-     */
-    public function getRoute($name)
+    public function getRoute(string $name) : ?RouteInterface
     {
         return $this->routes->get($name);
     }
 
     /**
+     * Remove a route from the stack.
+     */
+    public function removeRoute(string $name) : void
+    {
+        $this->routes->remove($name);
+    }
+
+
+    /**
      * Set a default parameters.
      *
-     * @param  array $params
-     * @return SimpleRouteStack
+     * @param mixed[] $params
      */
-    public function setDefaultParams(array $params)
+    public function setDefaultParams(array $params) : void
     {
         $this->defaultParams = $params;
-        return $this;
     }
 
     /**
      * Set a default parameter.
      *
-     * @param  string $name
      * @param  mixed  $value
-     * @return SimpleRouteStack
      */
-    public function setDefaultParam($name, $value)
+    public function setDefaultParam(string $name, $value) : void
     {
         $this->defaultParams[$name] = $value;
-        return $this;
     }
 
     /**
-     * Create a route from array specifications.
+     * Match a given request.
      *
-     * @param  array|Traversable $specs
-     * @return RouteInterface
-     * @throws Exception\InvalidArgumentException
+     * @param int $pathOffset URI path offset to use for matching
      */
-    protected function routeFromArray($specs)
+    public function match(Request $request, int $pathOffset = 0, array $options = []) : RouteResult
     {
-        if ($specs instanceof Traversable) {
-            $specs = ArrayUtils::iteratorToArray($specs);
-        }
-
-        if (! is_array($specs)) {
-            throw new Exception\InvalidArgumentException('Route definition must be an array or Traversable object');
-        }
-
-        if (! isset($specs['type'])) {
-            throw new Exception\InvalidArgumentException('Missing "type" option');
-        }
-
-        if (! isset($specs['options'])) {
-            $specs['options'] = [];
-        }
-
-        $route = $this->getRoutePluginManager()->get($specs['type'], $specs['options']);
-
-        if (isset($specs['priority'])) {
-            $route->priority = $specs['priority'];
-        }
-
-        return $route;
-    }
-
-    /**
-     * match(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::match()
-     * @param  Request $request
-     * @return RouteMatch|null
-     */
-    public function match(Request $request)
-    {
+        $methodFailureResults = [];
         foreach ($this->routes as $name => $route) {
-            if (($match = $route->match($request)) instanceof RouteMatch) {
-                $match->setMatchedRouteName($name);
-
-                foreach ($this->defaultParams as $paramName => $value) {
-                    if ($match->getParam($paramName) === null) {
-                        $match->setParam($paramName, $value);
-                    }
+            /** @var RouteInterface $route */
+            $result = $route->match($request, $pathOffset, $options);
+            if ($result->isSuccess()) {
+                $result = $result->withMatchedRouteName($name);
+                if (empty($this->defaultParams)) {
+                    return $result;
                 }
-
-                return $match;
+                return $result->withMatchedParams($result->getMatchedParams() + $this->defaultParams);
+            }
+            if ($result->isMethodFailure()) {
+                $methodFailureResults[] = $result;
             }
         }
-
-        return null;
+        if (! empty($methodFailureResults)) {
+            // micro optimisation
+            if (! isset($methodFailureResults[1])) {
+                return $methodFailureResults[0];
+            }
+            $methods = [];
+            foreach ($methodFailureResults as $failureResult) {
+                /** @var RouteResult $failureResult */
+                $methods = array_merge($methods, $failureResult->getAllowedMethods());
+            }
+            RouteResult::fromMethodFailure($methods);
+        }
+        return RouteResult::fromRouteFailure();
     }
 
     /**
-     * assemble(): defined by RouteInterface interface.
+     * Generate a URI
      *
-     * @see    \Zend\Router\RouteInterface::assemble()
-     * @param  array $params
-     * @param  array $options
-     * @return mixed
-     * @throws Exception\InvalidArgumentException
-     * @throws Exception\RuntimeException
+     * @param UriInterface $uri Base URI instance. Assembled URI path should
+     *      append to path present in base URI.
+     * @throws RuntimeException if unable to generate the given URI
+     * @throws InvalidArgumentException If required option "name" is not present
      */
-    public function assemble(array $params = [], array $options = [])
+    public function assemble(UriInterface $uri, array $substitutions = [], array $options = []) : UriInterface
     {
         if (! isset($options['name'])) {
-            throw new Exception\InvalidArgumentException('Missing "name" option');
+            throw new InvalidArgumentException('Missing "name" option');
         }
-
-        $route = $this->routes->get($options['name']);
-
-        if (! $route) {
-            throw new Exception\RuntimeException(sprintf('Route with name "%s" not found', $options['name']));
-        }
-
+        $name = $options['name'];
         unset($options['name']);
 
-        return $route->assemble(array_merge($this->defaultParams, $params), $options);
+        $route = $this->routes->get($name);
+        if (! $route) {
+            throw new RuntimeException(sprintf('Route with name "%s" not found', $name));
+        }
+
+        return $route->assemble($uri, array_merge($this->defaultParams, $substitutions), $options);
     }
 }
