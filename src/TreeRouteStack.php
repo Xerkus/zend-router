@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Zend\Router;
 
 use ArrayObject;
-use Traversable;
 use Zend\Router\Http\Chain;
 use Zend\Router\Http\Hostname;
 use Zend\Router\Http\Literal;
@@ -22,14 +21,11 @@ use Zend\Router\Http\RouteMatch;
 use Zend\Router\Http\Scheme;
 use Zend\Router\Http\Segment;
 use Zend\ServiceManager\Config;
-use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\RequestInterface as Request;
 use Zend\Uri\Http as HttpUri;
 
 use function array_merge;
 use function explode;
-use function is_array;
-use function is_string;
 use function method_exists;
 use function rtrim;
 use function sprintf;
@@ -53,46 +49,6 @@ class TreeRouteStack extends SimpleRouteStack
      * @var HttpUri
      */
     protected $requestUri;
-
-    /**
-     * Prototype routes.
-     *
-     * We use an ArrayObject in this case so we can easily pass it down the tree
-     * by reference.
-     *
-     * @var ArrayObject
-     */
-    protected $prototypes;
-
-    /**
-     * factory(): defined by RouteInterface interface.
-     *
-     * @see    \Zend\Router\RouteInterface::factory()
-     * @param  array|Traversable $options
-     * @return SimpleRouteStack
-     * @throws Exception\InvalidArgumentException
-     */
-    public static function factory($options = [])
-    {
-        if ($options instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($options);
-        }
-
-        if (! is_array($options)) {
-            throw new Exception\InvalidArgumentException(sprintf(
-                '%s expects an array or Traversable set of options',
-                __METHOD__
-            ));
-        }
-
-        $instance = parent::factory($options);
-
-        if (isset($options['prototypes'])) {
-            $instance->addPrototypes($options['prototypes']);
-        }
-
-        return $instance;
-    }
 
     /**
      * init(): defined by SimpleRouteStack.
@@ -146,146 +102,6 @@ class TreeRouteStack extends SimpleRouteStack
                 'zendmvcrouterhttpsegment'  => RouteInvokableFactory::class,
             ],
         ]))->configureServiceManager($this->routePluginManager);
-    }
-
-    /**
-     * addRoute(): defined by RouteStackInterface interface.
-     *
-     * @see    RouteStackInterface::addRoute()
-     * @param  string  $name
-     * @param  mixed   $route
-     * @param  int $priority
-     * @return TreeRouteStack
-     */
-    public function addRoute($name, $route, $priority = null)
-    {
-        if (! $route instanceof RouteInterface) {
-            $route = $this->routeFromArray($route);
-        }
-
-        return parent::addRoute($name, $route, $priority);
-    }
-
-    /**
-     * routeFromArray(): defined by SimpleRouteStack.
-     *
-     * @see    SimpleRouteStack::routeFromArray()
-     * @param  string|array|Traversable $specs
-     * @return RouteInterface
-     * @throws Exception\InvalidArgumentException When route definition is not an array nor traversable
-     * @throws Exception\InvalidArgumentException When chain routes are not an array nor traversable
-     * @throws Exception\RuntimeException         When a generated routes does not implement the HTTP route interface
-     */
-    protected function routeFromArray($specs)
-    {
-        if (is_string($specs)) {
-            if (null === ($route = $this->getPrototype($specs))) {
-                throw new Exception\RuntimeException(sprintf('Could not find prototype with name %s', $specs));
-            }
-
-            return $route;
-        } elseif ($specs instanceof Traversable) {
-            $specs = ArrayUtils::iteratorToArray($specs);
-        } elseif (! is_array($specs)) {
-            throw new Exception\InvalidArgumentException('Route definition must be an array or Traversable object');
-        }
-
-        if (isset($specs['chain_routes'])) {
-            if (! is_array($specs['chain_routes'])) {
-                throw new Exception\InvalidArgumentException('Chain routes must be an array or Traversable object');
-            }
-
-            $chainRoutes = array_merge([$specs], $specs['chain_routes']);
-            unset($chainRoutes[0]['chain_routes']);
-
-            if (isset($specs['child_routes'])) {
-                unset($chainRoutes[0]['child_routes']);
-            }
-
-            $options = [
-                'routes'        => $chainRoutes,
-                'route_plugins' => $this->routePluginManager,
-                'prototypes'    => $this->prototypes,
-            ];
-
-            $route = $this->routePluginManager->get('chain', $options);
-        } else {
-            $route = parent::routeFromArray($specs);
-        }
-
-        if (! $route instanceof RouteInterface) {
-            throw new Exception\RuntimeException('Given route does not implement HTTP route interface');
-        }
-
-        if (isset($specs['child_routes'])) {
-            $options = [
-                'route'         => $route,
-                'may_terminate' => (isset($specs['may_terminate']) && $specs['may_terminate']),
-                'child_routes'  => $specs['child_routes'],
-                'route_plugins' => $this->routePluginManager,
-                'prototypes'    => $this->prototypes,
-            ];
-
-            $priority = ($route->priority ?? null);
-
-            $route = $this->routePluginManager->get('part', $options);
-            $route->priority = $priority;
-        }
-
-        return $route;
-    }
-
-    /**
-     * Add multiple prototypes at once.
-     *
-     * @param  Traversable $routes
-     * @return TreeRouteStack
-     * @throws Exception\InvalidArgumentException
-     */
-    public function addPrototypes($routes)
-    {
-        if (! is_array($routes) && ! $routes instanceof Traversable) {
-            throw new Exception\InvalidArgumentException('addPrototypes expects an array or Traversable set of routes');
-        }
-
-        foreach ($routes as $name => $route) {
-            $this->addPrototype($name, $route);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add a prototype.
-     *
-     * @param  string $name
-     * @param  mixed  $route
-     * @return TreeRouteStack
-     */
-    public function addPrototype($name, $route)
-    {
-        if (! $route instanceof RouteInterface) {
-            $route = $this->routeFromArray($route);
-        }
-
-        $this->prototypes[$name] = $route;
-
-        return $this;
-    }
-
-    /**
-     * Get a prototype.
-     *
-     * @param  string $name
-     * @return RouteInterface|null
-     */
-    public function getPrototype($name)
-    {
-        if (isset($this->prototypes[$name])) {
-            return $this->prototypes[$name];
-        }
-
-        return null;
     }
 
     /**
