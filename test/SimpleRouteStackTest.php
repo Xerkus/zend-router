@@ -11,174 +11,401 @@ namespace ZendTest\Router;
 
 use ArrayIterator;
 use PHPUnit\Framework\TestCase;
+use Prophecy\Argument;
+use TypeError;
+use Zend\Diactoros\ServerRequest;
+use Zend\Diactoros\Uri;
 use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
+use Zend\Router\Http\Literal;
+use Zend\Router\RouteInterface;
+use Zend\Router\RouteResult;
 use Zend\Router\SimpleRouteStack;
 
+/**
+ * Note: route stack is LIFO
+ *
+ * @covers \Zend\Router\SimpleRouteStack
+ */
 class SimpleRouteStackTest extends TestCase
 {
-    public function testAddRoutesWithInvalidArgument()
-    {
-        $stack = new SimpleRouteStack();
+    /** @var SimpleRouteStack */
+    private $stack;
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('addRoutes expects an array or Traversable set of routes');
-        $stack->addRoutes('foo');
+    public function setUp() : void
+    {
+        $this->stack = new SimpleRouteStack();
+    }
+
+    public function testHaveNoRoutesByDefault()
+    {
+        $this->assertEmpty($this->stack->getRoutes());
+    }
+
+    public function testCanAddAndGetBackRouteByName()
+    {
+        /** @var RouteInterface $fooRoute */
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->addRoute('foo', $fooRoute);
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+    }
+
+    public function testGettingNonExistentRouteReturnsNull()
+    {
+        $this->assertNull($this->stack->getRoute('foo'));
     }
 
     public function testAddRoutesAsArray()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoutes([
-            'foo' => new TestAsset\DummyRoute(),
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->addRoutes([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]);
 
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+        $this->assertSame($barRoute, $this->stack->getRoute('bar'));
+        $this->assertSame(['bar' => $barRoute, 'foo' => $fooRoute], $this->stack->getRoutes());
     }
 
-    public function testAddRoutesAsTraversable()
+    public function testAddRoutesAsIterable()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoutes(new ArrayIterator([
-            'foo' => new TestAsset\DummyRoute(),
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->addRoutes(new ArrayIterator([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]));
 
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+        $this->assertSame($barRoute, $this->stack->getRoute('bar'));
+        $this->assertSame(['bar' => $barRoute, 'foo' => $fooRoute], $this->stack->getRoutes());
     }
 
-    public function testSetRoutesWithInvalidArgument()
+    public function testAddRoutesOverwritesExistingRouteByName()
     {
-        $stack = new SimpleRouteStack();
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute2 = $this->prophesize(RouteInterface::class)->reveal();
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('addRoutes expects an array or Traversable set of routes');
-        $stack->setRoutes('foo');
+        $this->stack->addRoutes([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
+        ]);
+
+        $this->stack->addRoutes(['bar' => $barRoute2]);
+
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+        $this->assertSame($barRoute2, $this->stack->getRoute('bar'));
+        $this->assertSame(['bar' => $barRoute2, 'foo' => $fooRoute], $this->stack->getRoutes());
+    }
+
+    public function testAddRoutesWithInvalidRouteCausesError()
+    {
+        $this->expectException(TypeError::class);
+        $this->stack->addRoutes([
+            'foo' => [
+                'type'    => Literal::class,
+                'options' => [],
+            ],
+        ]);
     }
 
     public function testSetRoutesAsArray()
     {
-        $stack = new SimpleRouteStack();
-        $stack->setRoutes([
-            'foo' => new TestAsset\DummyRoute(),
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->setRoutes([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]);
 
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
-
-        $stack->setRoutes([]);
-
-        $this->assertNull($stack->match(new Request()));
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+        $this->assertSame($barRoute, $this->stack->getRoute('bar'));
+        $this->assertSame(['bar' => $barRoute, 'foo' => $fooRoute], $this->stack->getRoutes());
     }
 
-    public function testSetRoutesAsTraversable()
+    public function testSetRoutesAsIterable()
     {
-        $stack = new SimpleRouteStack();
-        $stack->setRoutes(new ArrayIterator([
-            'foo' => new TestAsset\DummyRoute(),
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->setRoutes(new ArrayIterator([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]));
 
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
-
-        $stack->setRoutes(new ArrayIterator([]));
-
-        $this->assertNull($stack->match(new Request()));
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+        $this->assertSame($barRoute, $this->stack->getRoute('bar'));
+        $this->assertSame(['bar' => $barRoute, 'foo' => $fooRoute], $this->stack->getRoutes());
     }
 
-    public function testremoveRouteAsArray()
+    public function testSetRoutesOverwritesExistingRoutes()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoutes([
-            'foo' => new TestAsset\DummyRoute(),
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $fooRoute2 = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->setRoutes([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]);
 
-        $this->assertEquals($stack, $stack->removeRoute('foo'));
-        $this->assertNull($stack->match(new Request()));
+        $this->stack->setRoutes(['foo' => $fooRoute2]);
+
+        $this->assertSame($fooRoute2, $this->stack->getRoute('foo'));
+        $this->assertNull($this->stack->getRoute('bar'));
+        $this->assertSame(['foo' => $fooRoute2], $this->stack->getRoutes());
     }
 
-    public function testAddRouteWithInvalidArgument()
+    public function testSetEmptyRoutesRemovesAllRoutes()
     {
-        $stack = new SimpleRouteStack();
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Route definition must be an array or Traversable object');
-        $stack->addRoute('foo', 'bar');
-    }
-
-    public function testAddRouteAsArrayWithoutOptions()
-    {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', [
-            'type' => TestAsset\DummyRoute::class,
+        $this->stack->setRoutes([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]);
 
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
+        $this->stack->setRoutes([]);
+
+        $this->assertEmpty($this->stack->getRoutes());
     }
 
-    public function testAddRouteAsArrayWithOptions()
+    public function testSetRoutesWithInvalidRouteCausesError()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', [
-            'type'    => TestAsset\DummyRoute::class,
-            'options' => [],
+        $this->expectException(TypeError::class);
+        $this->stack->setRoutes([
+            'foo' => [
+                'type'    => Literal::class,
+                'options' => [],
+            ],
         ]);
-
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
-    }
-
-    public function testAddRouteAsArrayWithoutType()
-    {
-        $stack = new SimpleRouteStack();
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Missing "type" option');
-        $stack->addRoute('foo', []);
-    }
-
-    public function testAddRouteAsArrayWithPriority()
-    {
-        $stack = new SimpleRouteStack();
-
-        $stack->addRoute('foo', [
-            'type'     => TestAsset\DummyRouteWithParam::class,
-            'priority' => 2,
-        ])->addRoute('bar', [
-            'type'     => TestAsset\DummyRoute::class,
-            'priority' => 1,
-        ]);
-
-        $this->assertEquals('bar', $stack->match(new Request())->getParam('foo'));
     }
 
     public function testAddRouteWithPriority()
     {
-        $stack = new SimpleRouteStack();
+        /** @var RouteInterface $fooRoute */
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        /** @var RouteInterface $barRoute */
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $this->stack->addRoute('foo', $fooRoute, 2);
+        $this->stack->addRoute('bar', $barRoute, 1);
 
-        $route = new TestAsset\DummyRouteWithParam();
-        $route->priority = 2;
-        $stack->addRoute('baz', $route);
+        $this->assertSame(['foo' => $fooRoute, 'bar' => $barRoute], $this->stack->getRoutes());
+    }
 
-        $stack->addRoute('foo', [
-            'type'     => TestAsset\DummyRoute::class,
-            'priority' => 1,
+    public function testRemoveRouteByName()
+    {
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
+        $barRoute = $this->prophesize(RouteInterface::class)->reveal();
+
+        $this->stack->addRoutes([
+            'foo' => $fooRoute,
+            'bar' => $barRoute,
         ]);
 
-        $this->assertEquals('bar', $stack->match(new Request())->getParam('foo'));
+        $this->stack->removeRoute('foo');
+
+        $this->assertNull($this->stack->getRoute('foo'));
+        $this->assertSame($barRoute, $this->stack->getRoute('bar'));
+        $this->assertSame(['bar' => $barRoute], $this->stack->getRoutes());
     }
 
-    public function testAddRouteAsTraversable()
+    public function testRemoveNonExistentRouteByNameIsANoop()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', new ArrayIterator([
-            'type' => TestAsset\DummyRoute::class,
-        ]));
+        $fooRoute = $this->prophesize(RouteInterface::class)->reveal();
 
-        $this->assertInstanceOf(RouteMatch::class, $stack->match(new Request()));
+        $this->stack->addRoute('foo', $fooRoute);
+
+        $this->stack->removeRoute('baz');
+
+        $this->assertSame($fooRoute, $this->stack->getRoute('foo'));
+        $this->assertSame(['foo' => $fooRoute], $this->stack->getRoutes());
     }
 
-    public function testAssemble()
+    public function testMatchOnEmptyStackResultsInRoutingFailure()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $this->assertEquals('', $stack->assemble([], ['name' => 'foo']));
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
+
+        $this->assertTrue($result->isFailure());
+    }
+
+    public function testMatchUsesFirstSuccessfulMatch()
+    {
+        $request = new ServerRequest();
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->shouldNotBeCalled();
+
+        $barRoute = $this->prophesize(RouteInterface::class);
+        $barRoute->match($request, 0, Argument::any())
+            ->willReturn(RouteResult::fromRouteMatch(['matched' => 'bar']));
+
+        $bazRoute = $this->prophesize(RouteInterface::class);
+        $bazRoute->match($request, 0, Argument::any())
+            ->willReturn(RouteResult::fromRouteFailure());
+
+        $this->stack->addRoutes([
+            'foo' => $fooRoute->reveal(),
+            'bar' => $barRoute->reveal(),
+            'baz' => $bazRoute->reveal(),
+        ]);
+
+        $result = $this->stack->match($request);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('bar', $result->getMatchedRouteName());
+        $this->assertSame(['matched' => 'bar'], $result->getMatchedParams());
+    }
+
+    public function testMatchPassesPathOffsetAndOptionsToRoutes()
+    {
+        $request = new ServerRequest();
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match($request, 5, ['opt' => 'value'])
+            ->willReturn(RouteResult::fromRouteFailure())
+            ->shouldBeCalled();
+
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $this->stack->match($request, 5, ['opt' => 'value']);
+    }
+
+    public function testMatchesInLifoOrder()
+    {
+        $callOrder = [];
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'foo';
+                return RouteResult::fromRouteFailure();
+            });
+        $barRoute = $this->prophesize(RouteInterface::class);
+        $barRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'bar';
+                return RouteResult::fromRouteFailure();
+            });
+        $bazRoute = $this->prophesize(RouteInterface::class);
+        $bazRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'baz';
+                return RouteResult::fromRouteFailure();
+            });
+        $quxRoute = $this->prophesize(RouteInterface::class);
+        $quxRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'qux';
+                return RouteResult::fromRouteFailure();
+            });
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+        $this->stack->addRoutes(['bar' => $barRoute->reveal(), 'baz' => $bazRoute->reveal()]);
+        $this->stack->addRoute('qux', $quxRoute->reveal());
+        $request = new ServerRequest();
+
+        $this->stack->match($request);
+
+        $this->assertSame(['qux', 'baz', 'bar', 'foo'], $callOrder);
+    }
+
+    public function testMatchRespectsExplicitPriority()
+    {
+        $callOrder = [];
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'foo';
+                return RouteResult::fromRouteFailure();
+            });
+        $barRoute = $this->prophesize(RouteInterface::class);
+        $barRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'bar';
+                return RouteResult::fromRouteFailure();
+            });
+        $bazRoute = $this->prophesize(RouteInterface::class);
+        $bazRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'baz';
+                return RouteResult::fromRouteFailure();
+            });
+        $quxRoute = $this->prophesize(RouteInterface::class);
+        $quxRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'qux';
+                return RouteResult::fromRouteFailure();
+            });
+        $this->stack->addRoute('foo', $fooRoute->reveal(), 2);
+        $this->stack->addRoutes(['bar' => $barRoute->reveal(), 'baz' => $bazRoute->reveal()]);
+        $this->stack->addRoute('qux', $quxRoute->reveal(), 1);
+        $request = new ServerRequest();
+
+        $this->stack->match($request);
+
+        $this->assertSame(['foo', 'qux', 'baz', 'bar'], $callOrder);
+    }
+
+    public function testMatchReplacesMatchedRouteNameInResultFromRoute()
+    {
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->willReturn(RouteResult::fromRouteMatch(
+                [],
+                'baz'
+            ));
+
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('foo', $result->getMatchedRouteName());
+    }
+
+    public function testMatchedParametersIncludeDefaults()
+    {
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->willReturn(RouteResult::fromRouteMatch(['matched' => 'value']));
+
+        $this->stack->setDefaultParams(['default_param' => 'value']);
+        $this->stack->setDefaultParam('another_default_param', 'value');
+
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
+
+        $this->assertEquals([
+            'matched' => 'value',
+            'default_param' => 'value',
+            'another_default_param' => 'value',
+        ], $result->getMatchedParams());
+    }
+
+    public function testDefaultsDoNotOverrideMatchedParams()
+    {
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->willReturn(RouteResult::fromRouteMatch(['matched' => 'value']));
+
+        $this->stack->setDefaultParams(['matched' => 'other value', 'default_param' => 'value']);
+
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
+
+        $this->assertEquals(['matched' => 'value', 'default_param' => 'value'], $result->getMatchedParams());
     }
 
     public function testAssembleWithoutNameOption()
@@ -187,7 +414,7 @@ class SimpleRouteStackTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing "name" option');
-        $stack->assemble();
+        $stack->assemble(new Uri());
     }
 
     public function testAssembleNonExistentRoute()
@@ -196,66 +423,76 @@ class SimpleRouteStackTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Route with name "foo" not found');
-        $stack->assemble([], ['name' => 'foo']);
+        $stack->assemble(new Uri(), [], ['name' => 'foo']);
     }
 
-    public function testDefaultParamIsAddedToMatch()
+    public function testAssembleReturnsUriFromRoute()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $stack->setDefaultParam('foo', 'bar');
+        $uri = new Uri();
+        $expectedUri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, [], [])
+            ->willReturn($expectedUri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->match(new Request())->getParam('foo'));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $returned = $this->stack->assemble($uri, [], ['name' => 'foo']);
+
+        $this->assertSame($expectedUri, $returned);
     }
 
-    public function testDefaultParamDoesNotOverrideParam()
+    public function testStripsNameOptionFromOptionsForAssembling()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRouteWithParam());
-        $stack->setDefaultParam('foo', 'baz');
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, [], [])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->match(new Request())->getParam('foo'));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $this->stack->assemble($uri, [], ['name' => 'foo']);
     }
 
-    public function testDefaultParamIsUsedForAssembling()
+    public function testUriAndSubstitutionsAndOptionsPassedToRouteForAssembling()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRouteWithParam());
-        $stack->setDefaultParam('foo', 'bar');
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, ['substitution' => 'passed'], ['opt' => 'passed'])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->assemble([], ['name' => 'foo']));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $this->stack->assemble($uri, ['substitution' => 'passed'], ['name' => 'foo', 'opt' => 'passed']);
     }
 
-    public function testDefaultParamDoesNotOverrideParamForAssembling()
+    public function testDefaultParametersAddedToSubstitutionParametersForAssembling()
     {
-        $stack = new SimpleRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRouteWithParam());
-        $stack->setDefaultParam('foo', 'baz');
+        $this->stack->setDefaultParams(['default' => 'value']);
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, ['substitution' => 'passed', 'default' => 'value'], [])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->assemble(['foo' => 'bar'], ['name' => 'foo']));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $this->stack->assemble($uri, ['substitution' => 'passed'], ['name' => 'foo']);
     }
 
-    public function testGetRoutes()
+    public function testDefaultsDoNotOverrideSubstitutionParametersForAssembling()
     {
-        $stack = new SimpleRouteStack();
-        $this->assertInstanceOf('Traversable', $stack->getRoutes());
-    }
+        $this->stack->setDefaultParams(['substitution' => 'default', 'default' => 'value']);
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, ['substitution' => 'passed', 'default' => 'value'], [])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-    public function testGetRouteByName()
-    {
-        $stack = new SimpleRouteStack();
-        $route = new TestAsset\DummyRoute();
-        $stack->addRoute('foo', $route);
+        $this->stack->addRoute('foo', $route->reveal());
 
-        $this->assertEquals($route, $stack->getRoute('foo'));
-    }
-
-    public function testHasRoute()
-    {
-        $stack = new SimpleRouteStack();
-        $this->assertEquals(false, $stack->hasRoute('foo'));
-
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $this->assertEquals(true, $stack->hasRoute('foo'));
+        $this->stack->assemble($uri, ['substitution' => 'passed', 'default' => 'value'], ['name' => 'foo']);
     }
 }
