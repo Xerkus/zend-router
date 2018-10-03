@@ -9,18 +9,7 @@ declare(strict_types=1);
 
 namespace Zend\Router;
 
-use ArrayObject;
-use Zend\Router\Http\Chain;
-use Zend\Router\Http\Hostname;
-use Zend\Router\Http\Literal;
-use Zend\Router\Http\Method;
-use Zend\Router\Http\Part;
-use Zend\Router\Http\Regex;
-use Zend\Router\Http\RouteInterface;
 use Zend\Router\Http\RouteMatch;
-use Zend\Router\Http\Scheme;
-use Zend\Router\Http\Segment;
-use Zend\ServiceManager\Config;
 use Zend\Stdlib\RequestInterface as Request;
 use Zend\Uri\Http as HttpUri;
 
@@ -49,60 +38,6 @@ class TreeRouteStack extends SimpleRouteStack
      * @var HttpUri
      */
     protected $requestUri;
-
-    /**
-     * init(): defined by SimpleRouteStack.
-     *
-     * @see    SimpleRouteStack::init()
-     */
-    protected function init()
-    {
-        $this->prototypes = new ArrayObject();
-
-        (new Config([
-            'aliases' => [
-                'chain'    => Chain::class,
-                'Chain'    => Chain::class,
-                'hostname' => Hostname::class,
-                'Hostname' => Hostname::class,
-                'hostName' => Hostname::class,
-                'HostName' => Hostname::class,
-                'literal'  => Literal::class,
-                'Literal'  => Literal::class,
-                'method'   => Method::class,
-                'Method'   => Method::class,
-                'part'     => Part::class,
-                'Part'     => Part::class,
-                'regex'    => Regex::class,
-                'Regex'    => Regex::class,
-                'scheme'   => Scheme::class,
-                'Scheme'   => Scheme::class,
-                'segment'  => Segment::class,
-                'Segment'  => Segment::class,
-            ],
-            'factories' => [
-                Chain::class    => RouteInvokableFactory::class,
-                Hostname::class => RouteInvokableFactory::class,
-                Literal::class  => RouteInvokableFactory::class,
-                Method::class   => RouteInvokableFactory::class,
-                Part::class     => RouteInvokableFactory::class,
-                Regex::class    => RouteInvokableFactory::class,
-                Scheme::class   => RouteInvokableFactory::class,
-                Segment::class  => RouteInvokableFactory::class,
-
-                // v2 normalized names
-
-                'zendmvcrouterhttpchain'    => RouteInvokableFactory::class,
-                'zendmvcrouterhttphostname' => RouteInvokableFactory::class,
-                'zendmvcrouterhttpliteral'  => RouteInvokableFactory::class,
-                'zendmvcrouterhttpmethod'   => RouteInvokableFactory::class,
-                'zendmvcrouterhttppart'     => RouteInvokableFactory::class,
-                'zendmvcrouterhttpregex'    => RouteInvokableFactory::class,
-                'zendmvcrouterhttpscheme'   => RouteInvokableFactory::class,
-                'zendmvcrouterhttpsegment'  => RouteInvokableFactory::class,
-            ],
-        ]))->configureServiceManager($this->routePluginManager);
-    }
 
     /**
      * match(): defined by \Zend\Router\RouteInterface
