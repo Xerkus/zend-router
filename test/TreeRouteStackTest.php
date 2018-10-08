@@ -9,336 +9,288 @@ declare(strict_types=1);
 
 namespace ZendTest\Router;
 
-use ArrayIterator;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use Zend\Http\PhpEnvironment\Request as PhpRequest;
-use Zend\Http\Request;
+use Prophecy\Argument;
+use Zend\Diactoros\ServerRequest;
+use Zend\Diactoros\Uri;
 use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
-use Zend\Router\Http\Hostname;
+use Zend\Router\RouteInterface;
+use Zend\Router\RouteResult;
 use Zend\Router\TreeRouteStack;
-use Zend\Stdlib\Request as BaseRequest;
-use Zend\Uri\Http as HttpUri;
-use ZendTest\Router\Http\TestAsset;
-use ZendTest\Router\TestAsset\DummyRoute;
 
+/**
+ * @covers \Zend\Router\TreeRouteStack
+ */
 class TreeRouteStackTest extends TestCase
 {
-    public function testAddRouteRequiresHttpSpecificRoute()
-    {
-        $stack = new TreeRouteStack();
+    /** @var TreeRouteStack */
+    private $stack;
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Route definition must be an array or Traversable object');
-        $stack->addRoute('foo', new DummyRoute());
+    public function setUp() : void
+    {
+        $this->stack = new TreeRouteStack();
     }
 
-    public function testAddRouteViaStringRequiresHttpSpecificRoute()
+    public function testMatchOnEmptyStackResultsInRoutingFailure()
     {
-        $stack = new TreeRouteStack();
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Given route does not implement HTTP route interface');
-        $stack->addRoute('foo', [
-            'type' => DummyRoute::class,
-        ]);
+        $this->assertTrue($result->isFailure());
     }
 
-    public function testAddRouteAcceptsTraversable()
+    public function testMatchUsesFirstSuccessfulMatch()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new ArrayIterator([
-            'type' => TestAsset\DummyRoute::class,
-        ]));
-    }
+        $request = new ServerRequest();
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->shouldNotBeCalled();
 
-    public function testNoMatchWithoutUriMethod()
-    {
-        $stack = new TreeRouteStack();
-        $request = new BaseRequest();
+        $barRoute = $this->prophesize(RouteInterface::class);
+        $barRoute->match($request, 0, Argument::any())
+            ->willReturn(RouteResult::fromRouteMatch(['matched' => 'bar']));
 
-        $this->assertNull($stack->match($request));
-    }
+        $bazRoute = $this->prophesize(RouteInterface::class);
+        $bazRoute->match($request, 0, Argument::any())
+            ->willReturn(RouteResult::fromRouteFailure());
 
-    public function testSetBaseUrlFromFirstMatch()
-    {
-        $stack = new TreeRouteStack();
-
-        $request = new PhpRequest();
-        $request->setBaseUrl('/foo');
-        $stack->match($request);
-        $this->assertEquals('/foo', $stack->getBaseUrl());
-
-        $request = new PhpRequest();
-        $request->setBaseUrl('/bar');
-        $stack->match($request);
-        $this->assertEquals('/foo', $stack->getBaseUrl());
-    }
-
-    public function testBaseUrlLengthIsPassedAsOffset()
-    {
-        $stack = new TreeRouteStack();
-        $stack->setBaseUrl('/foo');
-        $stack->addRoute('foo', [
-            'type' => TestAsset\DummyRoute::class,
+        $this->stack->addRoutes([
+            'foo' => $fooRoute->reveal(),
+            'bar' => $barRoute->reveal(),
+            'baz' => $bazRoute->reveal(),
         ]);
 
-        $this->assertEquals(4, $stack->match(new Request())->getParam('offset'));
+        $result = $this->stack->match($request);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('bar', $result->getMatchedRouteName());
+        $this->assertSame(['matched' => 'bar'], $result->getMatchedParams());
     }
 
-    public function testNoOffsetIsPassedWithoutBaseUrl()
+    public function testMatchPassesPathOffsetAndOptionsToRoutes()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', [
-            'type' => TestAsset\DummyRoute::class,
-        ]);
+        $request = new ServerRequest();
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match($request, 5, ['opt' => 'value'])
+            ->willReturn(RouteResult::fromRouteFailure())
+            ->shouldBeCalled();
 
-        $this->assertEquals(null, $stack->match(new Request())->getParam('offset'));
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $this->stack->match($request, 5, ['opt' => 'value']);
     }
 
-    public function testAssemble()
+    public function testMatchesInLifoOrder()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $this->assertEquals('', $stack->assemble([], ['name' => 'foo']));
+        $callOrder = [];
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'foo';
+                return RouteResult::fromRouteFailure();
+            });
+        $barRoute = $this->prophesize(RouteInterface::class);
+        $barRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'bar';
+                return RouteResult::fromRouteFailure();
+            });
+        $bazRoute = $this->prophesize(RouteInterface::class);
+        $bazRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'baz';
+                return RouteResult::fromRouteFailure();
+            });
+        $quxRoute = $this->prophesize(RouteInterface::class);
+        $quxRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'qux';
+                return RouteResult::fromRouteFailure();
+            });
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+        $this->stack->addRoutes(['bar' => $barRoute->reveal(), 'baz' => $bazRoute->reveal()]);
+        $this->stack->addRoute('qux', $quxRoute->reveal());
+        $request = new ServerRequest();
+
+        $this->stack->match($request);
+
+        $this->assertSame(['qux', 'baz', 'bar', 'foo'], $callOrder);
     }
 
-    public function testAssembleCanonicalUriWithoutRequestUri()
+    public function testMatchRespectsExplicitPriority()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
+        $callOrder = [];
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'foo';
+                return RouteResult::fromRouteFailure();
+            });
+        $barRoute = $this->prophesize(RouteInterface::class);
+        $barRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'bar';
+                return RouteResult::fromRouteFailure();
+            });
+        $bazRoute = $this->prophesize(RouteInterface::class);
+        $bazRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'baz';
+                return RouteResult::fromRouteFailure();
+            });
+        $quxRoute = $this->prophesize(RouteInterface::class);
+        $quxRoute->match(Argument::cetera())
+            ->will(function () use (&$callOrder) {
+                $callOrder[] = 'qux';
+                return RouteResult::fromRouteFailure();
+            });
+        $this->stack->addRoute('foo', $fooRoute->reveal(), 2);
+        $this->stack->addRoutes(['bar' => $barRoute->reveal(), 'baz' => $bazRoute->reveal()]);
+        $this->stack->addRoute('qux', $quxRoute->reveal(), 1);
+        $request = new ServerRequest();
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Request URI has not been set');
-        $stack->assemble([], ['name' => 'foo', 'force_canonical' => true]);
+        $this->stack->match($request);
+
+        $this->assertSame(['foo', 'qux', 'baz', 'bar'], $callOrder);
     }
 
-    public function testAssembleCanonicalUriWithRequestUri()
+    public function testMatchPrependsMatchedRouteNameToNameInResultFromRoute()
     {
-        $uri = new HttpUri('http://example.com:8080/');
-        $stack = new TreeRouteStack();
-        $stack->setRequestUri($uri);
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->willReturn(RouteResult::fromRouteMatch(
+                [],
+                'baz'
+            ));
 
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $this->assertEquals(
-            'http://example.com:8080/',
-            $stack->assemble([], ['name' => 'foo', 'force_canonical' => true])
-        );
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('foo/baz', $result->getMatchedRouteName());
     }
 
-    public function testAssembleCanonicalUriWithGivenUri()
+    public function testMatchedParametersIncludeDefaults()
     {
-        $uri = new HttpUri('http://example.com:8080/');
-        $stack = new TreeRouteStack();
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->willReturn(RouteResult::fromRouteMatch(['matched' => 'value']));
 
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $this->assertEquals(
-            'http://example.com:8080/',
-            $stack->assemble([], ['name' => 'foo', 'uri' => $uri, 'force_canonical' => true])
-        );
+        $this->stack->setDefaultParams(['default_param' => 'value']);
+        $this->stack->setDefaultParam('another_default_param', 'value');
+
+        $this->stack->addRoute('foo', $fooRoute->reveal());
+
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
+
+        $this->assertEquals([
+            'matched' => 'value',
+            'default_param' => 'value',
+            'another_default_param' => 'value',
+        ], $result->getMatchedParams());
     }
 
-    public function testAssembleCanonicalUriWithHostnameRoute()
+    public function testDefaultsDoNotOverrideMatchedParams()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new Hostname('example.com'));
-        $uri = new HttpUri();
-        $uri->setScheme('http');
+        $fooRoute = $this->prophesize(RouteInterface::class);
+        $fooRoute->match(Argument::cetera())
+            ->willReturn(RouteResult::fromRouteMatch(['matched' => 'value']));
 
-        $this->assertEquals('http://example.com/', $stack->assemble([], ['name' => 'foo', 'uri' => $uri]));
-    }
+        $this->stack->setDefaultParams(['matched' => 'other value', 'default_param' => 'value']);
 
-    public function testAssembleCanonicalUriWithHostnameRouteWithoutScheme()
-    {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new Hostname('example.com'));
-        $uri = new HttpUri();
+        $this->stack->addRoute('foo', $fooRoute->reveal());
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Request URI has not been set');
-        $stack->assemble([], ['name' => 'foo', 'uri' => $uri]);
-    }
+        $request = new ServerRequest();
+        $result = $this->stack->match($request);
 
-    public function testAssembleCanonicalUriWithHostnameRouteAndRequestUriWithoutScheme()
-    {
-        $uri = new HttpUri();
-        $uri->setScheme('http');
-        $stack = new TreeRouteStack();
-        $stack->setRequestUri($uri);
-        $stack->addRoute('foo', new Hostname('example.com'));
-
-        $this->assertEquals('http://example.com/', $stack->assemble([], ['name' => 'foo']));
-    }
-
-    public function testAssembleWithQueryParams()
-    {
-        $stack = new TreeRouteStack();
-        $stack->addRoute(
-            'index',
-            [
-                'type' => 'Literal',
-                'options' => ['route' => '/'],
-            ]
-        );
-
-        $this->assertEquals('/?foo=bar', $stack->assemble([], ['name' => 'index', 'query' => ['foo' => 'bar']]));
-    }
-
-    public function testAssembleWithEncodedPath()
-    {
-        $stack = new TreeRouteStack();
-        $stack->addRoute(
-            'index',
-            [
-                'type' => 'Literal',
-                'options' => ['route' => '/this%2Fthat'],
-            ]
-        );
-
-        $this->assertEquals('/this%2Fthat', $stack->assemble([], ['name' => 'index']));
-    }
-
-    public function testAssembleWithEncodedPathAndQueryParams()
-    {
-        $stack = new TreeRouteStack();
-        $stack->addRoute(
-            'index',
-            [
-                'type' => 'Literal',
-                'options' => ['route' => '/this%2Fthat'],
-            ]
-        );
-
-        $this->assertEquals(
-            '/this%2Fthat?foo=bar',
-            $stack->assemble([], ['name' => 'index', 'query' => ['foo' => 'bar'], 'normalize_path' => false])
-        );
-    }
-
-    public function testAssembleWithScheme()
-    {
-        $uri = new HttpUri();
-        $uri->setScheme('http');
-        $uri->setHost('example.com');
-        $stack = new TreeRouteStack();
-        $stack->setRequestUri($uri);
-        $stack->addRoute(
-            'secure',
-            [
-                'type' => 'Scheme',
-                'options' => ['scheme' => 'https'],
-                'child_routes' => [
-                    'index' => [
-                        'type'    => 'Literal',
-                        'options' => ['route'    => '/'],
-                    ],
-                ],
-            ]
-        );
-        $this->assertEquals('https://example.com/', $stack->assemble([], ['name' => 'secure/index']));
-    }
-
-    public function testAssembleWithFragment()
-    {
-        $stack = new TreeRouteStack();
-        $stack->addRoute(
-            'index',
-            [
-                'type' => 'Literal',
-                'options' => ['route' => '/'],
-            ]
-        );
-
-        $this->assertEquals('/#foobar', $stack->assemble([], ['name' => 'index', 'fragment' => 'foobar']));
+        $this->assertEquals(['matched' => 'value', 'default_param' => 'value'], $result->getMatchedParams());
     }
 
     public function testAssembleWithoutNameOption()
     {
-        $stack = new TreeRouteStack();
-
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing "name" option');
-        $stack->assemble();
+        $this->stack->assemble(new Uri());
     }
 
     public function testAssembleNonExistentRoute()
     {
-        $stack = new TreeRouteStack();
-
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Route with name "foo" not found');
-        $stack->assemble([], ['name' => 'foo']);
+        $this->stack->assemble(new Uri(), [], ['name' => 'foo']);
     }
 
-    public function testAssembleNonExistentChildRoute()
+    public function testAssembleReturnsUriFromRoute()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute(
-            'index',
-            [
-                'type' => 'Literal',
-                'options' => ['route' => '/'],
-            ]
-        );
+        $uri = new Uri();
+        $expectedUri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, [], [])
+            ->willReturn($expectedUri)
+            ->shouldBeCalled();
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Route with name "index" does not have child routes');
-        $stack->assemble([], ['name' => 'index/foo']);
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $returned = $this->stack->assemble($uri, [], ['name' => 'foo']);
+
+        $this->assertSame($expectedUri, $returned);
     }
 
-    public function testDefaultParamIsAddedToMatch()
+    public function testStripsFirstRouteNameSegmentFromOptionsForAssembling()
     {
-        $stack = new TreeRouteStack();
-        $stack->setBaseUrl('/foo');
-        $stack->addRoute('foo', new TestAsset\DummyRoute());
-        $stack->setDefaultParam('foo', 'bar');
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, [], ['name' => 'bar/baz'])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->match(new Request())->getParam('foo'));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $this->stack->assemble($uri, [], ['name' => 'foo/bar/baz']);
     }
 
-    public function testDefaultParamDoesNotOverrideParam()
+    public function testUriAndSubstitutionsAndOptionsPassedToRouteForAssembling()
     {
-        $stack = new TreeRouteStack();
-        $stack->setBaseUrl('/foo');
-        $stack->addRoute('foo', new TestAsset\DummyRouteWithParam());
-        $stack->setDefaultParam('foo', 'baz');
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, ['substitution' => 'passed'], ['opt' => 'passed'])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->match(new Request())->getParam('foo'));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $this->stack->assemble($uri, ['substitution' => 'passed'], ['name' => 'foo', 'opt' => 'passed']);
     }
 
-    public function testDefaultParamIsUsedForAssembling()
+    public function testDefaultParametersAddedToSubstitutionParametersForAssembling()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRouteWithParam());
-        $stack->setDefaultParam('foo', 'bar');
+        $this->stack->setDefaultParams(['default' => 'value']);
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, ['substitution' => 'passed', 'default' => 'value'], [])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->assemble([], ['name' => 'foo']));
+        $this->stack->addRoute('foo', $route->reveal());
+
+        $this->stack->assemble($uri, ['substitution' => 'passed'], ['name' => 'foo']);
     }
 
-    public function testDefaultParamDoesNotOverrideParamForAssembling()
+    public function testDefaultsDoNotOverrideSubstitutionParametersForAssembling()
     {
-        $stack = new TreeRouteStack();
-        $stack->addRoute('foo', new TestAsset\DummyRouteWithParam());
-        $stack->setDefaultParam('foo', 'baz');
+        $this->stack->setDefaultParams(['substitution' => 'default', 'default' => 'value']);
+        $uri = new Uri();
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble($uri, ['substitution' => 'passed', 'default' => 'value'], [])
+            ->willReturn($uri)
+            ->shouldBeCalled();
 
-        $this->assertEquals('bar', $stack->assemble(['foo' => 'bar'], ['name' => 'foo']));
-    }
+        $this->stack->addRoute('foo', $route->reveal());
 
-    public function testSetBaseUrl()
-    {
-        $stack = new TreeRouteStack();
-
-        $this->assertEquals($stack, $stack->setBaseUrl('/foo/'));
-        $this->assertEquals('/foo', $stack->getBaseUrl());
-    }
-
-    public function testSetRequestUri()
-    {
-        $uri = new HttpUri();
-        $stack = new TreeRouteStack();
-
-        $this->assertEquals($stack, $stack->setRequestUri($uri));
-        $this->assertEquals($uri, $stack->getRequestUri());
+        $this->stack->assemble($uri, ['substitution' => 'passed', 'default' => 'value'], ['name' => 'foo']);
     }
 }
