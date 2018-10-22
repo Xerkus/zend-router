@@ -17,6 +17,7 @@ use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
 use Zend\Router\RouteInterface;
 use Zend\Router\RouteResult;
+use Zend\Router\RouteStackInterface;
 use Zend\Router\TreeRouteStack;
 
 /**
@@ -224,6 +225,22 @@ class TreeRouteStackTest extends TestCase
         $this->stack->assemble(new Uri(), [], ['name' => 'foo']);
     }
 
+    public function testAssembleNonExistentChildRoute()
+    {
+        $route = $this->prophesize(RouteInterface::class);
+        $route->assemble()->shouldNotBeCalled();
+
+        $stack = new TreeRouteStack();
+        $stack->addRoute(
+            'index',
+            $route->reveal()
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Route with name "index" does not have child routes');
+        $stack->assemble(new Uri(), [], ['name' => 'index/foo']);
+    }
+
     public function testAssembleReturnsUriFromRoute()
     {
         $uri = new Uri();
@@ -243,7 +260,7 @@ class TreeRouteStackTest extends TestCase
     public function testStripsFirstRouteNameSegmentFromOptionsForAssembling()
     {
         $uri = new Uri();
-        $route = $this->prophesize(RouteInterface::class);
+        $route = $this->prophesize(RouteStackInterface::class);
         $route->assemble($uri, [], ['name' => 'bar/baz'])
             ->willReturn($uri)
             ->shouldBeCalled();

@@ -84,6 +84,12 @@ class TreeRouteStack extends SimpleRouteStack
 
         unset($options['name']);
         if (isset($names[1])) {
+            if (! $route instanceof RouteStackInterface) {
+                throw new RuntimeException(sprintf(
+                    'Route with name "%s" does not have child routes',
+                    $names[0]
+                ));
+            }
             $options['name'] = $names[1];
         }
 
