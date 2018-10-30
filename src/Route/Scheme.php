@@ -21,7 +21,7 @@ use function sprintf;
 /**
  * Scheme route.
  */
-class Scheme implements RouteInterface
+class Scheme implements PartialRouteInterface
 {
     /**
      * Scheme to match.
@@ -123,7 +123,7 @@ class Scheme implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

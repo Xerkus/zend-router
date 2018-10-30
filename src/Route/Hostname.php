@@ -26,7 +26,7 @@ use function strlen;
 /**
  * Hostname route.
  */
-class Hostname implements RouteInterface
+class Hostname implements PartialRouteInterface
 {
     /**
      * Parts of the route.
@@ -345,7 +345,7 @@ class Hostname implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

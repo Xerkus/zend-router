@@ -31,7 +31,7 @@ use function strtr;
 /**
  * Segment route.
  */
-class Segment implements RouteInterface
+class Segment implements PartialRouteInterface
 {
     /**
      * Cache for the encode output.
@@ -442,7 +442,7 @@ class Segment implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

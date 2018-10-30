@@ -22,7 +22,7 @@ use function sprintf;
 /**
  * Placeholder route.
  */
-class Placeholder implements RouteInterface
+class Placeholder implements PartialRouteInterface
 {
     private $defaults;
 
@@ -92,7 +92,7 @@ class Placeholder implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

@@ -31,7 +31,7 @@ use function strpos;
 /**
  * Regex route.
  */
-class Regex implements RouteInterface
+class Regex implements PartialRouteInterface
 {
     /**
      * Regex to match.
@@ -180,7 +180,7 @@ class Regex implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

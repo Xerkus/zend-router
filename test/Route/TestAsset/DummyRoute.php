@@ -9,14 +9,14 @@ declare(strict_types=1);
 
 namespace ZendTest\Router\Route\TestAsset;
 
-use Zend\Router\Route\RouteInterface;
+use Zend\Router\Route\PartialRouteInterface;
 use Zend\Router\Route\RouteMatch;
 use Zend\Stdlib\RequestInterface;
 
 /**
  * Dummy route.
  */
-class DummyRoute implements RouteInterface
+class DummyRoute implements PartialRouteInterface
 {
     /**
      * match(): defined by RouteInterface interface.

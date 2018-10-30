@@ -25,7 +25,7 @@ use function strtoupper;
 /**
  * Method route.
  */
-class Method implements RouteInterface
+class Method implements PartialRouteInterface
 {
     /**
      * Verb to match.
@@ -124,7 +124,7 @@ class Method implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

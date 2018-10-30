@@ -23,7 +23,7 @@ use function strpos;
 /**
  * Literal route.
  */
-class Literal implements RouteInterface
+class Literal implements PartialRouteInterface
 {
     /**
      * RouteInterface to match.
@@ -129,7 +129,7 @@ class Literal implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

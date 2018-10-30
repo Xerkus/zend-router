@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 use Zend\Http\Request;
 use Zend\I18n\Translator\Translator;
 use Zend\I18n\Translator\TranslatorAwareInterface;
-use Zend\Router\Route\RouteInterface;
+use Zend\Router\Route\PartialRouteInterface;
 use Zend\Router\Route\TranslatorAwareTreeRouteStack;
 use Zend\Uri\Http as HttpUri;
 
@@ -92,7 +92,7 @@ class TranslatorAwareTreeRouteStackTest extends TestCase
         $translator = new Translator();
         $request = new Request();
 
-        $route = $this->getMock(RouteInterface::class);
+        $route = $this->getMock(PartialRouteInterface::class);
         $route->expects($this->once())
               ->method('match')
             ->with(
@@ -112,7 +112,7 @@ class TranslatorAwareTreeRouteStackTest extends TestCase
         $translator = new Translator();
         $uri = new HttpUri();
 
-        $route = $this->getMock(RouteInterface::class);
+        $route = $this->getMock(PartialRouteInterface::class);
         $route->expects($this->once())
               ->method('assemble')
             ->with(

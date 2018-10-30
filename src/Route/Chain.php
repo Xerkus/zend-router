@@ -31,7 +31,7 @@ use function strlen;
 /**
  * Chain route.
  */
-class Chain extends TreeRouteStack implements RouteInterface
+class Chain extends TreeRouteStack implements PartialRouteInterface
 {
     /**
      * Chain routes.
@@ -194,7 +194,7 @@ class Chain extends TreeRouteStack implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()

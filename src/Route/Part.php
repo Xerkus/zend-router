@@ -28,12 +28,12 @@ use function strlen;
 /**
  * Part route.
  */
-class Part extends TreeRouteStack implements RouteInterface
+class Part extends TreeRouteStack
 {
     /**
      * RouteInterface to match.
      *
-     * @var RouteInterface
+     * @var PartialRouteInterface
      */
     protected $route;
 
@@ -70,7 +70,7 @@ class Part extends TreeRouteStack implements RouteInterface
     ) {
         $this->routePluginManager = $routePlugins;
 
-        if (! $route instanceof RouteInterface) {
+        if (! $route instanceof PartialRouteInterface) {
             $route = $this->routeFromArray($route);
         }
 
@@ -229,7 +229,7 @@ class Part extends TreeRouteStack implements RouteInterface
     /**
      * getAssembledParams(): defined by RouteInterface interface.
      *
-     * @see    RouteInterface::getAssembledParams
+     * @see    PartialRouteInterface::getAssembledParams
      * @return array
      */
     public function getAssembledParams()
