@@ -21,6 +21,8 @@ use function sort;
 
 trait PartialRouteTestTrait
 {
+    use RouteTestTrait;
+
     abstract public function getRouteTestDefinitions() : iterable;
 
     /**
