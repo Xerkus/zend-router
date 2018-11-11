@@ -18,11 +18,10 @@ use Zend\I18n\Translator\TextDomain;
 use Zend\I18n\Translator\Translator;
 use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
-use Zend\Router\Route\PartialRouteResult;
-use Zend\Router\Route\PartialRouteTrait;
+use Zend\Router\Route\Partial\FullMatch;
 use Zend\Router\Route\Segment;
 use Zend\Router\RouteResult;
-use ZendTest\Router\FactoryTester;
+use ZendTest\Router\Route\TestAsset\PartialRouteTestTrait;
 use ZendTest\Router\Route\TestAsset\RouteTestDefinition;
 
 use function implode;
@@ -32,8 +31,7 @@ use function implode;
  */
 class SegmentTest extends TestCase
 {
-    use PartialRouteTrait;
-    use RouteTestTrait;
+    use PartialRouteTestTrait;
 
     public function getRouteTestDefinitions() : iterable
     {
@@ -46,7 +44,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -59,7 +57,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteFailure()
             )
             ->expectPartialMatchResult(
-                PartialRouteResult::fromRouteFailure(0)
+                RouteResult::fromRouteFailure()
             );
 
         yield 'partial match with trailing slash' => (new RouteTestDefinition(
@@ -70,7 +68,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteFailure()
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch(['foo' => 'bar']), 4)
+                RouteResult::fromRouteMatch(['foo' => 'bar'])
             );
 
         $params = ['foo' => 'bar'];
@@ -83,7 +81,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             );
 
         $params = ['foo' => 'bar', 'baz' => 'qux'];
@@ -95,7 +93,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -109,7 +107,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -122,7 +120,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteFailure()
             )
             ->expectPartialMatchResult(
-                PartialRouteResult::fromRouteFailure(0)
+                RouteResult::fromRouteFailure()
             );
 
         $params = ['foo' => '123'];
@@ -134,7 +132,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -148,7 +146,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -162,7 +160,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -175,7 +173,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch(['foo' => 'bar'])
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch(['foo' => 'bar']), 1)
+                RouteResult::fromRouteMatch(['foo' => 'bar'])
             );
 
         yield 'optional parameter is ignored' => (new RouteTestDefinition(
@@ -186,7 +184,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch(['foo' => 'bar'])
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch(['foo' => 'bar']), 4)
+                RouteResult::fromRouteMatch(['foo' => 'bar'])
             );
 
         $params = ['foo' => 'bar', 'bar' => 'baz'];
@@ -198,7 +196,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -212,7 +210,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -226,7 +224,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -240,7 +238,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -254,7 +252,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -268,7 +266,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -282,7 +280,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -296,7 +294,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -310,7 +308,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -324,7 +322,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -338,7 +336,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -352,7 +350,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch($params)
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch($params), 4)
+                RouteResult::fromRouteMatch($params)
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useParamsForAssemble($params);
@@ -388,7 +386,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch([])
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch([]), 10)
+                RouteResult::fromRouteMatch([])
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useOptionsForAssemble(['translator' => $translator]);
@@ -402,7 +400,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch([])
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch([]), 10)
+                RouteResult::fromRouteMatch([])
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useOptionsForAssemble(['translator' => $translator, 'locale' => 'de-DE']);
@@ -416,7 +414,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch([])
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch([]), 10)
+                RouteResult::fromRouteMatch([])
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useOptionsForAssemble(['translator' => $translator, 'locale' => 'fr-FR']);
@@ -430,7 +428,7 @@ class SegmentTest extends TestCase
                 RouteResult::fromRouteMatch([])
             )
             ->expectPartialMatchResult(
-                new PartialRouteResult(RouteResult::fromRouteMatch([]), 10)
+                RouteResult::fromRouteMatch([])
             )
             ->shouldAssembleAndExpectResultSameAsUriForMatching()
             ->useOptionsForAssemble(['translator' => $translator, 'text_domain' => 'alternative']);
@@ -510,27 +508,6 @@ class SegmentTest extends TestCase
         $this->assertEquals('/bar', $path);
     }
 
-    public function testGetAssembledParams()
-    {
-        $uri = new Uri();
-        $route = new Segment('/:foo');
-        $route->assemble($uri, ['foo' => 'bar', 'baz' => 'bat']);
-        $this->assertEquals(['foo'], $route->getAssembledParams());
-    }
-
-    public function testFactory()
-    {
-        $tester = new FactoryTester($this);
-        $tester->testFactory(
-            Segment::class,
-            ['route' => 'Missing "route" in options array'],
-            [
-                'route' => '/:foo[/:bar{-}]',
-                'constraints' => ['foo' => 'bar'],
-            ]
-        );
-    }
-
     public function testRawDecode()
     {
         // verify all characters which don't absolutely require encoding pass through match unchanged
@@ -584,6 +561,6 @@ class SegmentTest extends TestCase
         $this->expectExceptionMessage('Path offset cannot be negative');
         $request = $this->prophesize(ServerRequestInterface::class);
         $route = new Segment('/foo');
-        $route->matchPartial($request->reveal(), -1);
+        $route->matchPartial($request->reveal(), FullMatch::getInstance(), -1);
     }
 }

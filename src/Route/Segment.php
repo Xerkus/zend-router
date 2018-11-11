@@ -15,12 +15,11 @@ use Zend\I18n\Translator\TranslatorInterface as Translator;
 use Zend\Router\Exception\DomainException;
 use Zend\Router\Exception\InvalidArgumentException;
 use Zend\Router\Exception\RuntimeException;
+use Zend\Router\RouteInterface;
 use Zend\Router\RouteResult;
-use Zend\Stdlib\ArrayUtils;
 
 use function array_merge;
 use function count;
-use function is_array;
 use function preg_match;
 use function preg_quote;
 use function rawurldecode;
@@ -126,32 +125,6 @@ class Segment implements PartialRouteInterface
         $this->defaults = $defaults;
         $this->parts = $this->parseRouteDefinition($route);
         $this->regex = $this->buildRegex($this->parts, $constraints);
-    }
-
-    /**
-     * factory(): defined by RouteInterface interface.
-     *
-     * @throws InvalidArgumentException
-     */
-    public static function factory(iterable $options = []) : self
-    {
-        if (! is_array($options)) {
-            $options = ArrayUtils::iteratorToArray($options);
-        }
-
-        if (! isset($options['route'])) {
-            throw new InvalidArgumentException('Missing "route" in options array');
-        }
-
-        if (! isset($options['constraints'])) {
-            $options['constraints'] = [];
-        }
-
-        if (! isset($options['defaults'])) {
-            $options['defaults'] = [];
-        }
-
-        return new static($options['route'], $options['constraints'], $options['defaults']);
     }
 
     /**
@@ -351,8 +324,12 @@ class Segment implements PartialRouteInterface
      * @throws InvalidArgumentException
      * @throws RuntimeException
      */
-    public function matchPartial(Request $request, int $pathOffset = 0, array $options = []) : PartialRouteResult
-    {
+    public function matchPartial(
+        Request $request,
+        RouteInterface $next,
+        int $pathOffset = 0,
+        array $options = []
+    ) : RouteResult {
         if ($pathOffset < 0) {
             throw new InvalidArgumentException('Path offset cannot be negative');
         }
@@ -379,7 +356,7 @@ class Segment implements PartialRouteInterface
         $result = preg_match('(\G' . $regex . ')', $path, $matches, 0, $pathOffset);
 
         if (! $result) {
-            return PartialRouteResult::fromRouteFailure($pathOffset);
+            return RouteResult::fromRouteFailure();
         }
 
         $matchedLength = strlen($matches[0]);
@@ -391,30 +368,38 @@ class Segment implements PartialRouteInterface
             }
         }
 
-        return new PartialRouteResult(
-            RouteResult::fromRouteMatch(array_merge($this->defaults, $params)),
-            $pathOffset + $matchedLength
-        );
+        $result = $next->match($request, $pathOffset + $matchedLength, $options);
+
+        if ($result->isFailure()) {
+            return $result;
+        }
+
+        if (empty($params) && empty($this->defaults)) {
+            return $result;
+        }
+
+        return $result->withMatchedParams(array_merge($this->defaults, $params, $result->getMatchedParams()));
     }
 
-    public function assemble(UriInterface $uri, array $params = [], array $options = []) : UriInterface
-    {
+    public function assemblePartial(
+        UriInterface $uri,
+        RouteInterface $next,
+        array $substitutions = [],
+        array $options = []
+    ) : UriInterface {
         $this->assembledParams = [];
 
         $path = $this->buildPath(
             $this->parts,
-            array_merge($this->defaults, $params),
+            array_merge($this->defaults, $substitutions),
             false,
             $options['has_child'] ?? false,
             $options
         );
 
-        return $uri->withPath($uri->getPath() . $path);
-    }
-
-    public function getAssembledParams() : array
-    {
-        return $this->assembledParams;
+        $uri = $uri->withPath($uri->getPath() . $path);
+        // @TODO pass assembled params as options to next routes
+        return $next->assemble($uri, $substitutions, $options);
     }
 
     /**
